@@ -311,19 +311,16 @@ function renderCafeArt(state) {
   const totalItems = state.zones.reduce((s, z) => s + z.items.length, 0);
   const wallColors = state.walls.map(w => w.id[0].toUpperCase() + ':' + w.color).join('  ');
 
-  // Build a visual cafe layout using box-drawing chars
   let art = '';
   art += '  ┌─────────────────────────────────────────────────┐\n';
-  art += '  │  ☕ CAT CAFE — ' + state.size_sqft + 'sqft — ' + totalItems + '/' + state.max_items + ' items';
-  art += ' '.repeat(Math.max(2, 38 - ('☕ CAT CAFE — ' + state.size_sqft + 'sqft — ' + totalItems + '/' + state.max_items + ' items').length)) + '│\n';
+  const headerStr = '  ☕ CAT CAFE — ' + state.size_sqft + 'sqft — ' + totalItems + '/' + state.max_items + ' items';
+  art += '  │' + headerStr + ' '.repeat(Math.max(2, 49 - headerStr.length)) + '│\n';
   art += '  ├──────────────────┬──────────────────────────────┤\n';
 
-  // Layout zones in a 2-column grid
   const zones = state.zones;
   for (let i = 0; i < zones.length; i += 2) {
     const left = zones[i];
     const right = zones[i + 1];
-    // Zone header line
     art += '  │ ┌[' + left.name + '] ' + left.items.length + '/' + left.max_items + '│';
     if (right) {
       art += ' ┌[' + right.name + '] ' + right.items.length + '/' + right.max_items + '│';
@@ -332,31 +329,32 @@ function renderCafeArt(state) {
     }
     art += '│\n';
 
-    // Items in zone (up to 3 lines each)
-    const maxItems = Math.max(left.items.length, right ? right.items.length : 0);
     for (let j = 0; j < 3; j++) {
+      // Left zone items
       art += '  │ │';
+      let leftContent = '';
       if (left.items[j]) {
         const icon = getItemIcon(left.items[j].type);
-        art += ' ' + icon + ' ' + left.items[j].color + ' ' + left.items[j].name.slice(0, 12);
-        if (left.items[j].added_by_name) art += ' (' + left.items[j].added_by_name + ')';
+        leftContent = ' ' + icon + ' ' + left.items[j].color + ' ' + left.items[j].name.slice(0, 12);
+        if (left.items[j].added_by_name) leftContent += ' (' + left.items[j].added_by_name + ')';
       }
-      art += ' '.repeat(Math.max(1, 16 - (left.items[j] ? (' ' + getItemIcon(left.items[j].type) + ' ' + left.items[j].color + ' ' + left.items[j].name.slice(0, 12) + (left.items[j].added_by_name ? ' (' + left.items[j].added_by_name + ')' : '')).length)));
-      art += '│';
+      art += leftContent + ' '.repeat(Math.max(1, 16 - leftContent.length)) + '│';
+
       if (right) {
         art += ' │';
+        let rightContent = '';
         if (right.items[j]) {
           const icon2 = getItemIcon(right.items[j].type);
-          art += ' ' + icon2 + ' ' + right.items[j].color + ' ' + right.items[j].name.slice(0, 12);
-          if (right.items[j].added_by_name) art += ' (' + right.items[j].added_by_name + ')';
+          rightContent = ' ' + icon2 + ' ' + right.items[j].color + ' ' + right.items[j].name.slice(0, 12);
+          if (right.items[j].added_by_name) rightContent += ' (' + right.items[j].added_by_name + ')';
         }
-        art += ' '.repeat(Math.max(1, 22 - (right.items[j] ? (' ' + getItemIcon(right.items[j].type) + ' ' + right.items[j].color + ' ' + right.items[j].name.slice(0, 12) + (right.items[j].added_by_name ? ' (' + right.items[j].added_by_name + ')' : '')).length)));
-        art += '│';
+        art += rightContent + ' '.repeat(Math.max(1, 22 - rightContent.length)) + '│';
       } else {
         art += '                              │';
       }
       art += '│\n';
     }
+
     art += '  │ └────────────────┘';
     if (right) art += ' └────────────────────────────┘';
     else art += '                              ';
@@ -367,7 +365,8 @@ function renderCafeArt(state) {
   }
 
   art += '  ├─────────────────────────────────────────────────┤\n';
-  art += '  │  Walls: ' + wallColors + ' '.repeat(Math.max(2, 32 - ('Walls: ' + wallColors).length)) + '│\n';
+  const wallStr = '  Walls: ' + wallColors;
+  art += '  │' + wallStr + ' '.repeat(Math.max(2, 49 - wallStr.length)) + '│\n';
   art += '  └─────────────────────────────────────────────────┘\n';
   return art;
 }
