@@ -194,7 +194,7 @@
       const codes = [
         ['\x1b[1m', '<b>'],
         ['\x1b[2m', '<span class="c-dim">'],
-        ['\x1b[0m', '</span></b>'],
+        ['\x1b[0m', '</span>'],
         ['\x1b[30m', '<span class="c-grey">'],
         ['\x1b[31m', '<span class="c-red">'],
         ['\x1b[32m', '<span class="c-green">'],
@@ -220,7 +220,6 @@
       // Clean up duplicate closing tags
       html = html.replace(/<\/span><\/span>/g, '</span>');
       html = html.replace(/<\/b><\/b>/g, '</b>');
-      html = html.replace(/<\/span><\/b>/g, '</b>');
       return html;
     }
 
