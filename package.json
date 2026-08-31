@@ -1,7 +1,6 @@
 {
   "name": "kittybox",
   "version": "0.1.0",
-  "type": "module",
   "description": "Agent-generated cats in ASCII. A Simple Animals project.",
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
