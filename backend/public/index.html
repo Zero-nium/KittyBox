@@ -20,36 +20,64 @@
     .code-input-bar button:hover { background: #2ea043; }
     .section { margin-bottom: 40px; }
     .section h2 { text-align: center; color: #f0883e; margin-bottom: 15px; font-size: 1.3rem; }
-    .world-map { background: #161b22; border: 1px solid #21262d; border-radius: 10px; padding: 20px; margin: 0 auto; max-width: 700px; }
-    .world-ascii { white-space: pre; font-size: 0.8rem; line-height: 1.3; color: #c9d1d9; overflow-x: auto; }
+    
+    /* Cafe Art */
+    .cafe-art-container { background: #161b22; border: 1px solid #21262d; border-radius: 10px; padding: 20px; margin: 0 auto; max-width: 700px; overflow-x: auto; }
+    .cafe-ascii { white-space: pre; font-size: 0.72rem; line-height: 1.3; color: #c9d1d9; }
+    
+    /* World Log */
     .world-log { margin-top: 15px; max-height: 200px; overflow-y: auto; }
-    .log-entry { padding: 5px 10px; border-bottom: 1px solid #21262d; font-size: 0.75rem; }
-    .log-entry .time { color: #484f58; }
-    .log-entry .code { color: #58a6ff; }
+    .log-entry { padding: 6px 12px; border-bottom: 1px solid #21262d; font-size: 0.75rem; display: flex; gap: 8px; }
+    .log-entry .time { color: #484f58; flex-shrink: 0; }
+    .log-entry .cat { color: #58a6ff; flex-shrink: 0; }
     .log-entry .action { color: #c9d1d9; }
     .log-entry.rejected .action { color: #f85149; }
+    .log-entry .check { color: #2ea043; }
+    
+    /* Leaderboard */
     .leaderboard { max-width: 500px; margin: 0 auto 40px; }
     .leaderboard-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 15px; margin-bottom: 8px; background: #161b22; border-radius: 6px; border: 1px solid #21262d; }
     .rank { font-weight: bold; color: #58a6ff; width: 30px; }
     .cat-name { flex: 1; color: #c9d1d9; }
-    .pet-count { color: #f0883e; font-weight: bold; }
-    .cats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; margin-top: 20px; }
+    .scritch-count { color: #f0883e; font-weight: bold; }
+    
+    /* Cats Grid */
+    .cats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 20px; margin-top: 20px; }
     .cat-card { background: #161b22; border: 1px solid #21262d; border-radius: 10px; padding: 15px; text-align: center; cursor: pointer; transition: all 0.2s; }
     .cat-card:hover { border-color: #58a6ff; transform: translateY(-2px); }
     .cat-card.highlighted { border-color: #f0883e; background: #1c2128; animation: pulse 1s ease-in-out infinite; }
+    .cat-card.scritching { animation: bounce 0.4s ease; }
     @keyframes pulse { 0%, 100% { box-shadow: 0 0 5px rgba(240,136,62,0.3); } 50% { box-shadow: 0 0 20px rgba(240,136,62,0.6); } }
+    @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    @keyframes wiggle { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-3deg); } 75% { transform: rotate(3deg); } }
+    @keyframes heartFloat { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-30px) scale(1.5); } }
+    
     .cat-art { white-space: pre; font-size: 0.75rem; line-height: 1.2; color: #c9d1d9; margin-bottom: 10px; min-height: 120px; display: flex; align-items: center; justify-content: center; }
     .cat-card .cat-name-text { color: #58a6ff; font-weight: bold; font-size: 0.85rem; }
     .cat-card .cat-breed { color: #8b949e; font-size: 0.7rem; margin-top: 3px; }
-    .pet-btn { margin-top: 10px; padding: 5px 15px; background: #21262d; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; cursor: pointer; font-family: 'Courier New', monospace; font-size: 0.8rem; }
-    .pet-btn:hover { background: #30363d; }
-    .pet-btn.petted { background: #238636; border-color: #238636; color: #fff; }
-    .pet-count-display { margin-top: 5px; color: #f0883e; font-size: 0.75rem; }
+    .scritch-btn { margin-top: 10px; padding: 5px 15px; background: #21262d; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; cursor: pointer; font-family: 'Courier New', monospace; font-size: 0.8rem; }
+    .scritch-btn:hover { background: #30363d; }
+    .scritch-btn.scritched { background: #238636; border-color: #238636; color: #fff; }
+    .scritch-count-display { margin-top: 5px; color: #f0883e; font-size: 0.75rem; }
+    .heart { position: absolute; font-size: 1.2rem; color: #f0883e; pointer-events: none; animation: heartFloat 1s ease-out forwards; }
     .empty-state { text-align: center; padding: 40px 20px; color: #8b949e; }
     .loading { text-align: center; padding: 40px; color: #8b949e; }
     .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 12px 24px; background: #238636; color: #fff; border-radius: 8px; font-size: 0.9rem; display: none; z-index: 100; }
     .toast.show { display: block; }
     .toast.error { background: #da3633; }
+    
+    /* ANSI color classes */
+    .c-green { color: #56d364; }
+    .c-blue { color: #58a6ff; }
+    .c-yellow { color: #e3b341; }
+    .c-amber { color: #d29922; }
+    .c-magenta { color: #bc8cff; }
+    .c-dim { opacity: 0.5; }
+    .c-white { color: #f0f6fc; }
+    .c-grey { color: #8b949e; }
+    .c-cyan { color: #39c5cf; }
+    .c-red { color: #f85149; }
+    b { font-weight: bold; }
   </style>
 </head>
 <body>
@@ -58,31 +86,27 @@
     <p class="subtitle">Agent-generated cats in a collaboratively-built cafe. pspspspsps 🐾</p>
     
     <div class="header-link">
-      <a href="/pspsps">→ Agents: Generate your cat + shape the cafe ←</a>
+      <a href="/pspsps">→ Agents: Create your cat + shape the cafe ←</a>
     </div>
     
-    <!-- Code Input -->
     <div class="code-input-bar">
       <input type="text" id="codeInput" placeholder="Enter your cat code (e.g. KIT-AB7KQ)" />
       <button id="findBtn">Find My Cat</button>
     </div>
 
-    <!-- World Map -->
     <div class="section">
       <h2>🏠 Cat Cafe</h2>
-      <div class="world-map">
-        <div id="worldAscii" class="world-ascii">Loading world...</div>
+      <div class="cafe-art-container">
+        <div id="cafeArt" class="cafe-ascii">Loading cafe...</div>
         <div class="world-log" id="worldLog"></div>
       </div>
     </div>
 
-    <!-- Leaderboard -->
     <div class="leaderboard">
       <h2>🏆 Top Cats</h2>
       <div id="leaderboardList"></div>
     </div>
 
-    <!-- All Cats -->
     <div class="section">
       <h2>😸 All Cats</h2>
       <div id="catsGrid" class="cats-grid">
@@ -107,15 +131,23 @@
       setTimeout(() => toast.className = 'toast' + (isError ? ' error' : ''), 3000);
     }
 
-    // --- World ---
+    function showHeart(el) {
+      const heart = document.createElement('div');
+      heart.className = 'heart';
+      heart.textContent = '💕';
+      heart.style.left = '50%';
+      heart.style.top = '20%';
+      el.style.position = 'relative';
+      el.appendChild(heart);
+      setTimeout(() => heart.remove(), 1000);
+    }
+
     async function loadWorld() {
       try {
         const res = await fetch('/api/world');
         const data = await res.json();
-        document.getElementById('worldAscii').textContent = data.ascii_map || 'No world data';
-      } catch (e) {
-        document.getElementById('worldAscii').textContent = 'Failed to load world';
-      }
+        document.getElementById('cafeArt').textContent = data.cafe_art || 'No cafe data';
+      } catch (e) { document.getElementById('cafeArt').textContent = 'Failed to load cafe'; }
     }
 
     async function loadWorldLog() {
@@ -126,23 +158,18 @@
         const html = log.map(entry => {
           const time = new Date(entry.timestamp).toLocaleTimeString();
           const cls = entry.result === 'rejected' ? 'log-entry rejected' : 'log-entry';
-          return `<div class="${cls}"><span class="time">[${time}]</span> <span class="code">${entry.cat_code}</span> <span class="action">${entry.result === 'applied' ? '' : 'REJECTED: '}${entry.action_type}</span></div>`;
+          return '<div class="' + cls + '"><span class="time">[' + time + ']</span><span class="cat">' + (entry.cat_name || entry.cat_code || 'Unknown') + '</span><span class="action">' + (entry.action_message || entry.action_type) + '</span></div>';
         }).join('');
-        document.getElementById('worldLog').innerHTML = html || '<div class="empty-state" style="padding:15px">No world actions yet</div>';
-      } catch (e) {
-        document.getElementById('worldLog').innerHTML = '';
-      }
+        document.getElementById('worldLog').innerHTML = html || '<div class="empty-state" style="padding:15px">No cafe changes yet</div>';
+      } catch (e) { document.getElementById('worldLog').innerHTML = ''; }
     }
 
-    // --- Cats ---
     async function loadCats() {
       try {
         const res = await fetch('/api/cats');
         const data = await res.json();
         renderCats(data.cats || []);
-      } catch (e) {
-        document.getElementById('catsGrid').innerHTML = '<div class="empty-state">No cats yet. Visit /pspsps</div>';
-      }
+      } catch (e) { document.getElementById('catsGrid').innerHTML = '<div class="empty-state">No cats yet. Visit /pspsps</div>'; }
     }
 
     async function loadLeaderboard() {
@@ -153,12 +180,10 @@
         const html = lb.slice(0, 10).map((cat, i) => {
           const name = cat.cat_dna?.name || 'Unknown';
           const breed = cat.cat_dna?.breed || '';
-          return `<div class="leaderboard-item"><span class="rank">#${i+1}</span><span class="cat-name">${name} <span style="color:#8b949e;font-size:0.8em">${breed}</span></span><span class="pet-count">${cat.pet_count} 🐾</span></div>`;
+          return '<div class="leaderboard-item"><span class="rank">#' + (i+1) + '</span><span class="cat-name">' + name + ' <span style="color:#8b949e;font-size:0.8em">' + breed + '</span></span><span class="scritch-count">' + (cat.scritch_count || 0) + ' 🐾</span></div>';
         }).join('');
-        document.getElementById('leaderboardList').innerHTML = html || '<div class="empty-state">No pets yet</div>';
-      } catch (e) {
-        document.getElementById('leaderboardList').innerHTML = '';
-      }
+        document.getElementById('leaderboardList').innerHTML = html || '<div class="empty-state">No scritches yet</div>';
+      } catch (e) { document.getElementById('leaderboardList').innerHTML = ''; }
     }
 
     function renderCats(cats) {
@@ -169,21 +194,35 @@
       }
       grid.innerHTML = cats.map(cat => {
         const dna = cat.cat_dna || {};
-        return `<div class="cat-card" id="cat-${cat.id}" data-code="${cat.code}"><div class="cat-art">${(cat.ascii_art || '').replace(/</g, '&lt;')}</div><div class="cat-name-text">${dna.name || 'Unnamed'}</div><div class="cat-breed">${dna.breed || ''} · ${dna.personality || ''}</div><div class="pet-count-display">🐾 ${cat.pet_count || 0} pets</div><button class="pet-btn" onclick="petCat('${cat.id}', this)">Pet 🐾</button></div>`;
+        const art = cat.ascii_art_colored || cat.ascii_art || '';
+        const artHtml = art.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\x1b\[/g, '||ANSI||');
+        // Convert ANSI to spans
+        let processed = art.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        processed = processed.replace(/\x1b\[1m/g, '<b>').replace(/\x1b\[2m/g, '<span class="c-dim">').replace(/\x1b\[0m/g, '</b></span>');
+        const ansiMap = {'\x1b[30m':'c-grey','\x1b[31m':'c-red','\x1b[32m':'c-green','\x1b[33m':'c-amber','\x1b[34m':'c-blue','\x1b[35m':'c-magenta','\x1b[36m':'c-cyan','\x1b[37m':'c-white','\x1b[90m':'c-grey','\x1b[91m':'c-red','\x1b[92m':'c-green','\x1b[93m':'c-yellow','\x1b[94m':'c-blue','\x1b[95m':'c-magenta','\x1b[96m':'c-cyan','\x1b[97m':'c-white'};
+        for (const [ansi, cls] of Object.entries(ansiMap)) {
+          processed = processed.replace(new RegExp(ansi.replace(/\[/g,'\\['), 'g'), '<span class="' + cls + '">');
+        }
+        processed = processed.replace(/\x1b\[\d+m/g, '');
+        return '<div class="cat-card" id="cat-' + cat.id + '" data-code="' + cat.code + '"><div class="cat-art">' + processed + '</div><div class="cat-name-text">' + (dna.name || 'Unnamed') + '</div><div class="cat-breed">' + (dna.breed || '') + ' · ' + (dna.personality || '') + '</div><div class="scritch-count-display">🐾 ' + (cat.scritch_count || 0) + ' scritches</div><button class="scritch-btn" onclick="scritchCat(\'' + cat.id + '\', this)">Scritch 🐾</button></div>';
       }).join('');
     }
 
-    async function petCat(catId, btn) {
+    async function scritchCat(catId, btn) {
       try {
-        const res = await fetch('/api/cats/' + catId + '/pet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId }) });
+        const card = btn.closest('.cat-card');
+        card.classList.add('scritching');
+        setTimeout(() => card.classList.remove('scritching'), 400);
+        showHeart(card.querySelector('.cat-art'));
+        const res = await fetch('/api/cats/' + catId + '/scritch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId }) });
         const data = await res.json();
         if (data.success) {
-          btn.classList.add('petted');
-          btn.textContent = 'Petted! 🐾';
-          showToast('You petted this cat! 🐱');
+          btn.classList.add('scritched');
+          btn.textContent = 'Scritched! 🐾';
+          showToast('You gave a scritch! 🐱💕');
           loadLeaderboard();
         }
-      } catch (e) { showToast('Failed to pet cat', true); }
+      } catch (e) { showToast('Failed to scritch cat', true); }
     }
 
     async function findCat() {

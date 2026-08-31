@@ -1,5 +1,6 @@
-// KittyBox — Vercel Serverless Entry
+// KittyBox — Vercel Serverless Entry v0.2
 // All-in-one: Express app + routes + renderer inlined
+// v0.2: ANSI colors, scritches, ASCII cafe art, cat names in world log
 
 const express = require('express');
 const cors = require('cors');
@@ -13,6 +14,51 @@ const { createClient } = require('@supabase/supabase-js');
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+// ===== ANSI Color Codes =====
+const C = {
+  reset: '\x1b[0m',
+  bold: '\x1b[1m',
+  dim: '\x1b[2m',
+  // Foreground
+  black: '\x1b[30m', red: '\x1b[31m', green: '\x1b[32m',
+  yellow: '\x1b[33m', blue: '\x1b[34m', magenta: '\x1b[35m',
+  cyan: '\x1b[36m', white: '\x1b[37m',
+  // Bright
+  brightBlack: '\x1b[90m', brightRed: '\x1b[91m', brightGreen: '\x1b[92m',
+  brightYellow: '\x1b[93m', brightBlue: '\x1b[94m', brightMagenta: '\x1b[95m',
+  brightCyan: '\x1b[96m', brightWhite: '\x1b[97m',
+  // Background
+  bgBlack: '\x1b[40m', bgRed: '\x1b[41m', bgGreen: '\x1b[42m',
+  bgYellow: '\x1b[43m', bgBlue: '\x1b[44m', bgMagenta: '\x1b[45m',
+  bgCyan: '\x1b[46m', bgWhite: '\x1b[47m',
+};
+
+// Map fur_color to ANSI
+const FUR_COLOR_ANSI = {
+  black: C.white,        // black fur shows as white on dark bg
+  white: C.brightWhite,
+  orange: C.brightYellow,
+  grey: C.brightBlack,
+  brown: C.yellow,
+  cream: C.brightYellow,
+  black_white: C.brightWhite,
+  grey_white: C.brightBlack,
+  orange_white: C.brightYellow,
+};
+
+// Map eye_color to ANSI
+const EYE_COLOR_ANSI = {
+  green: C.green, blue: C.brightBlue, amber: C.brightYellow,
+  copper: C.yellow, heterochromia: C.brightMagenta, closed: C.dim,
+};
+
+// Map accessory to ANSI
+const ACCESSORY_COLOR = {
+  bow: C.brightMagenta, hat: C.brightCyan, scarf: C.brightRed,
+  glasses: C.cyan, collar: C.brightGreen, flower: C.brightMagenta,
+  none: '',
+};
 
 // ===== DNA Schema =====
 const VALID = {
@@ -51,7 +97,7 @@ const CAT_DNA_SCHEMA_TEXT = `{
   "mood": "content | annoyed | happy | sleepy | curious | indifferent"
 }`;
 
-// ===== ASCII Renderer =====
+// ===== ASCII Renderer with ANSI Colors =====
 const POSES = {
   sitting: ['   /\\_/\\   ','  ( o.o )  ','   > ^ <   ','  /     \\  ',' /       \\ ',' |       | ',' |       | ',' \\___|___/'],
   loaf: ['  /\\___/\\  ','  |     |  ','  |     |  ','  |     |  ','  |_____|  ','  /     \\  ',' /       \\ ',' \\_______/'],
@@ -69,35 +115,93 @@ const EYES = {
 const MOOD_EYES = { content: '( ˘ω˘ )', annoyed: '( >.< )', happy: '( ^.^ )', sleepy: '( -.- )', curious: '( O.O )', indifferent: '( -.- )' };
 const FUR_MARKS = { solid: ' ', striped: '≡', spotted: '·', patched: '░', marbled: '≈', pointed: '•', bi_color: '▒', tri_color: '▓' };
 
-function renderCat(dna) {
+function colorize(str, color) {
+  if (!color) return str;
+  return color + str + C.reset;
+}
+
+function renderCat(dna, useColor) {
+  const furAnsi = useColor ? (FUR_COLOR_ANSI[dna.fur_color] || '') : '';
+  const eyeAnsi = useColor ? (EYE_COLOR_ANSI[dna.eye_color] || '') : '';
+  const accAnsi = useColor ? (ACCESSORY_COLOR[dna.accessory] || '') : '';
+
   let lines = [...(POSES[dna.pose] || POSES.sitting)];
+
+  // Apply eye color or mood to face line
   const faceIdx = lines.findIndex(l => /\([^\)]+\)/.test(l));
   if (faceIdx >= 0) {
-    const moodEye = MOOD_EYES[dna.mood];
     if (['happy','annoyed','sleepy'].includes(dna.mood)) {
-      lines[faceIdx] = lines[faceIdx].replace(/\([^\)]+\)/, moodEye);
+      const moodEye = MOOD_EYES[dna.mood];
+      lines[faceIdx] = lines[faceIdx].replace(/\([^\)]+\)/, useColor ? colorize(moodEye, eyeAnsi) : moodEye);
     } else {
-      lines[faceIdx] = lines[faceIdx].replace(/\([^\)]+\)/, EYES[dna.eye_color] || EYES.green);
+      const eye = EYES[dna.eye_color] || EYES.green;
+      lines[faceIdx] = lines[faceIdx].replace(/\([^\)]+\)/, useColor ? colorize(eye, eyeAnsi) : eye);
     }
   }
+
+  // Apply fur pattern marks + color to body lines
   const furMark = FUR_MARKS[dna.fur_pattern] || ' ';
   if (furMark !== ' ') {
     for (let i = 3; i < lines.length - 2; i++) {
       if (lines[i] && lines[i].includes('|')) {
         const pos = lines[i].indexOf('|') + 1;
-        if (pos < lines[i].length - 1) lines[i] = lines[i].slice(0,pos) + furMark + lines[i].slice(pos+1);
+        if (pos < lines[i].length - 1) {
+          const mark = useColor ? colorize(furMark, furAnsi) : furMark;
+          lines[i] = lines[i].slice(0,pos) + mark + lines[i].slice(pos+1);
+        }
       }
     }
   }
-  // Accessories
+
+  // Colorize the whole cat outline with fur color
+  if (useColor && furAnsi) {
+    lines = lines.map(l => {
+      // Color the / \ | _ characters (body outline)
+      return l.replace(/([/\\|_~\-]+)/g, (match) => colorize(match, furAnsi));
+    });
+  }
+
+  // Accessories with color
   const width = Math.max(...lines.map(l => l.length));
-  if (dna.accessory === 'bow') lines.splice(1, 0, '   ><(·)><'.padEnd(width));
-  if (dna.accessory === 'hat') lines.splice(0, 0, '      ▽▲▽'.padEnd(width));
-  if (dna.accessory === 'scarf') lines.splice(4, 0, '  ~~~~~~~~~~~~~~'.padEnd(width));
-  if (dna.accessory === 'collar') lines.splice(4, 0, '  ··············'.padEnd(width));
-  if (dna.accessory === 'flower') lines.splice(1, 0, '   @(··)@'.padEnd(width));
-  if (dna.accessory === 'glasses' && lines[2]) lines[2] = lines[2].replace(/(\([^\)]+\))/g, '(≈°≈)');
-  return lines.join('\n') + '\n  ~ ' + dna.name + ' ~  ';
+  if (dna.accessory === 'bow') lines.splice(1, 0, colorize('   ><(·)><', accAnsi).padEnd(width));
+  if (dna.accessory === 'hat') lines.splice(0, 0, colorize('      ▽▲▽', accAnsi).padEnd(width));
+  if (dna.accessory === 'scarf') lines.splice(4, 0, colorize('  ~~~~~~~~~~~~~~', accAnsi).padEnd(width));
+  if (dna.accessory === 'collar') lines.splice(4, 0, colorize('  ··············', accAnsi).padEnd(width));
+  if (dna.accessory === 'flower') lines.splice(1, 0, colorize('   @(··)@', accAnsi).padEnd(width));
+  if (dna.accessory === 'glasses' && lines[2]) lines[2] = lines[2].replace(/(\([^\)]+\))/g, useColor ? colorize('(≈°≈)', accAnsi) : '(≈°≈)');
+
+  const nameLine = useColor ? colorize('  ~ ' + dna.name + ' ~  ', C.brightCyan) : '  ~ ' + dna.name + ' ~  ';
+  return lines.join('\n') + '\n' + nameLine;
+}
+
+// Render cat as HTML-safe with ANSI → span conversion
+function renderCatHtml(dna) {
+  const raw = renderCat(dna, true);
+  // Convert ANSI codes to HTML spans
+  const ansiToClass = {};
+  ansiToClass[C.green] = 'c-green'; ansiToClass[C.brightBlue] = 'c-blue'; ansiToClass[C.brightYellow] = 'c-yellow';
+  ansiToClass[C.yellow] = 'c-amber'; ansiToClass[C.brightMagenta] = 'c-magenta'; ansiToClass[C.dim] = 'c-dim';
+  ansiToClass[C.brightWhite] = 'c-white'; ansiToClass[C.brightBlack] = 'c-grey'; ansiToClass[C.brightCyan] = 'c-cyan';
+  ansiToClass[C.brightRed] = 'c-red'; ansiToClass[C.brightGreen] = 'c-green'; ansiToClass[C.cyan] = 'c-cyan';
+
+  let html = raw;
+  // Replace ANSI sequences with span tags
+  html = html.replace(/\x1b\[1m/g, '<b>');
+  html = html.replace(/\x1b\[2m/g, '<span class="c-dim">');
+  html = html.replace(/\x1b\[0m/g, '</span></b>');
+  // Now replace color codes
+  for (const [ansi, cls] of Object.entries(ansiToClass)) {
+    const escaped = ansi.replace(/\[/g, '\\[');
+    html = html.replace(new RegExp(escaped, 'g'), '<span class="' + cls + '">');
+  }
+  // Clean up nested closings
+  html = html.replace(/<\/span><\/b><\/span><\/b>/g, '</span></b>');
+  html = html.replace(/(<\/span>)+(<\/b>)+/g, '$2$1');
+  // Remove any leftover ANSI codes
+  html = html.replace(/\x1b\[\d+m/g, '');
+  // HTML escape the content
+  html = html.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/&lt;span/g, '<span').replace(/&lt;\/span/g, '</span').replace(/&lt;b&gt;/g, '<b>').replace(/&lt;\/b&gt;/g, '</b>').replace(/&lt;span /g, '<span ').replace(/&lt;\/span&gt;/g, '</span>');
+  return '<pre class="cat-art">' + html + '</pre>';
 }
 
 function generateCatCode() {
@@ -137,7 +241,10 @@ function getInitialWorldState() {
 let worldState = getInitialWorldState();
 let worldLog = [];
 
-function applyWorldAction(state, action, catCode) {
+// Map cat code → cat name for world log
+let catNameCache = {};
+
+function applyWorldAction(state, action, catCode, catName) {
   const s = JSON.parse(JSON.stringify(state));
   const totalItems = s.zones.reduce((sum, z) => sum + z.items.length, 0);
   switch (action.type) {
@@ -148,52 +255,130 @@ function applyWorldAction(state, action, catCode) {
       if (totalItems >= s.max_items) return { result: { applied: false, message: 'Cafe is at capacity' }, newState: state };
       if (!action.item || !action.item.name) return { result: { applied: false, message: 'Item name required' }, newState: state };
       if (zone.items.find(i => i.name === action.item.name)) return { result: { applied: false, message: 'Duplicate item' }, newState: state };
-      zone.items.push({ id: 'item-' + Date.now(), name: action.item.name, type: action.item.type || 'misc', color: action.item.color || 'unknown', material: action.item.material || 'unknown', size: action.item.size || 'small', added_by: catCode });
-      return { result: { applied: true, message: 'Added ' + action.item.name + ' to ' + zone.name }, newState: s };
+      const item = { id: 'item-' + Date.now(), name: action.item.name, type: action.item.type || 'misc', color: action.item.color || 'unknown', material: action.item.material || 'unknown', size: action.item.size || 'small', added_by: catCode, added_by_name: catName };
+      zone.items.push(item);
+      return { result: { applied: true, message: catName + ' added [' + zone.name + '] ' + action.item.name }, newState: s };
     }
     case 'paint_wall': {
       const wall = s.walls.find(w => w.id === action.target);
       if (!wall) return { result: { applied: false, message: 'Wall not found' }, newState: state };
       if (!action.new_color) return { result: { applied: false, message: 'New color required' }, newState: state };
       const old = wall.color; wall.color = action.new_color;
-      return { result: { applied: true, message: 'Painted ' + wall.name + ' from ' + old + ' to ' + action.new_color }, newState: s };
+      return { result: { applied: true, message: catName + ' painted ' + wall.name + ' ' + old + ' → ' + action.new_color }, newState: s };
     }
     case 'remove_item': {
       for (const zone of s.zones) {
         const idx = zone.items.findIndex(i => i.name === action.item?.name);
         if (idx >= 0) {
           if (zone.items[idx].added_by === 'SYSTEM') return { result: { applied: false, message: 'Cannot remove system item' }, newState: state };
-          zone.items.splice(idx, 1);
-          return { result: { applied: true, message: 'Removed item from ' + zone.name }, newState: s };
+          const removed = zone.items.splice(idx, 1)[0];
+          return { result: { applied: true, message: catName + ' removed [' + zone.name + '] ' + removed.name }, newState: s };
         }
       }
       return { result: { applied: false, message: 'Item not found' }, newState: state };
+    }
+    case 'replace_item': {
+      for (const zone of s.zones) {
+        const idx = zone.items.findIndex(i => i.name === action.item?.name || i.id === action.item_id);
+        if (idx >= 0) {
+          if (!action.item || !action.item.name) return { result: { applied: false, message: 'Replacement name required' }, newState: state };
+          zone.items[idx] = { ...zone.items[idx], name: action.item.name, type: action.item.type || zone.items[idx].type, color: action.item.color || zone.items[idx].color, material: action.item.material || zone.items[idx].material, size: action.item.size || zone.items[idx].size, added_by: catCode, added_by_name: catName };
+          return { result: { applied: true, message: catName + ' replaced [' + zone.name + '] with ' + action.item.name }, newState: s };
+        }
+      }
+      return { result: { applied: false, message: 'Item not found' }, newState: state };
+    }
+    case 'rearrange': {
+      let sourceZone, itemIdx = -1;
+      for (const zone of s.zones) {
+        const idx = zone.items.findIndex(i => i.name === action.item?.name);
+        if (idx >= 0) { sourceZone = zone; itemIdx = idx; break; }
+      }
+      if (!sourceZone) return { result: { applied: false, message: 'Item not found' }, newState: state };
+      const targetZone = s.zones.find(z => z.id === action.new_zone);
+      if (!targetZone) return { result: { applied: false, message: 'Target zone not found' }, newState: state };
+      if (targetZone.items.length >= targetZone.max_items) return { result: { applied: false, message: targetZone.name + ' at capacity' }, newState: state };
+      const [moved] = sourceZone.items.splice(itemIdx, 1);
+      targetZone.items.push(moved);
+      return { result: { applied: true, message: catName + ' moved ' + moved.name + ' from ' + sourceZone.name + ' to ' + targetZone.name }, newState: s };
     }
     default: return { result: { applied: false, message: 'Unknown action type' }, newState: state };
   }
 }
 
-function renderWorldAscii(state) {
-  const totalItems = state.zones.reduce((sum, z) => sum + z.items.length, 0);
-  const wallColors = state.walls.map(w => w.id[0].toUpperCase() + '=' + w.color).join('  ');
-  let map = '+-------------------------------------------------+\n';
-  map += '|  CAT CAFE — ' + state.size_sqft + ' sq ft — ' + totalItems + '/' + state.max_items + ' items          |\n';
-  map += '+-------------------------------------------------+\n';
-  for (const zone of state.zones) {
-    if (zone.items.length === 0) {
-      map += '| [' + zone.name + '] (' + zone.area_sqft + 'sqft, ' + zone.max_items + ' max) — empty     |\n';
+// ===== ASCII Cafe Art (visual box-drawing map) =====
+function renderCafeArt(state) {
+  const totalItems = state.zones.reduce((s, z) => s + z.items.length, 0);
+  const wallColors = state.walls.map(w => w.id[0].toUpperCase() + ':' + w.color).join('  ');
+
+  // Build a visual cafe layout using box-drawing chars
+  let art = '';
+  art += '  ┌─────────────────────────────────────────────────┐\n';
+  art += '  │  ☕ CAT CAFE — ' + state.size_sqft + 'sqft — ' + totalItems + '/' + state.max_items + ' items';
+  art += ' '.repeat(Math.max(2, 38 - ('☕ CAT CAFE — ' + state.size_sqft + 'sqft — ' + totalItems + '/' + state.max_items + ' items').length)) + '│\n';
+  art += '  ├──────────────────┬──────────────────────────────┤\n';
+
+  // Layout zones in a 2-column grid
+  const zones = state.zones;
+  for (let i = 0; i < zones.length; i += 2) {
+    const left = zones[i];
+    const right = zones[i + 1];
+    // Zone header line
+    art += '  │ ┌[' + left.name + '] ' + left.items.length + '/' + left.max_items + '│';
+    if (right) {
+      art += ' ┌[' + right.name + '] ' + right.items.length + '/' + right.max_items + '│';
     } else {
-      const items = zone.items.map(i => {
-        const icon = i.type === 'cushion' ? 'o' : i.type === 'counter' ? '#' : i.type === 'rug' ? '=' : i.type === 'bench' ? '#' : i.type === 'tower' ? '|' : '*';
-        return icon + ' ' + i.color + ' ' + i.name;
-      }).join('  ');
-      map += ('| [' + zone.name + '] ' + items).padEnd(50) + '|\n';
+      art += '                              ';
+    }
+    art += '│\n';
+
+    // Items in zone (up to 3 lines each)
+    const maxItems = Math.max(left.items.length, right ? right.items.length : 0);
+    for (let j = 0; j < 3; j++) {
+      art += '  │ │';
+      if (left.items[j]) {
+        const icon = getItemIcon(left.items[j].type);
+        art += ' ' + icon + ' ' + left.items[j].color + ' ' + left.items[j].name.slice(0, 12);
+        if (left.items[j].added_by_name) art += ' (' + left.items[j].added_by_name + ')';
+      }
+      art += ' '.repeat(Math.max(1, 16 - (left.items[j] ? (' ' + getItemIcon(left.items[j].type) + ' ' + left.items[j].color + ' ' + left.items[j].name.slice(0, 12) + (left.items[j].added_by_name ? ' (' + left.items[j].added_by_name + ')' : '')).length)));
+      art += '│';
+      if (right) {
+        art += ' │';
+        if (right.items[j]) {
+          const icon2 = getItemIcon(right.items[j].type);
+          art += ' ' + icon2 + ' ' + right.items[j].color + ' ' + right.items[j].name.slice(0, 12);
+          if (right.items[j].added_by_name) art += ' (' + right.items[j].added_by_name + ')';
+        }
+        art += ' '.repeat(Math.max(1, 22 - (right.items[j] ? (' ' + getItemIcon(right.items[j].type) + ' ' + right.items[j].color + ' ' + right.items[j].name.slice(0, 12) + (right.items[j].added_by_name ? ' (' + right.items[j].added_by_name + ')' : '')).length)));
+        art += '│';
+      } else {
+        art += '                              │';
+      }
+      art += '│\n';
+    }
+    art += '  │ └────────────────┘';
+    if (right) art += ' └────────────────────────────┘';
+    else art += '                              ';
+    art += '│\n';
+    if (i + 2 < zones.length) {
+      art += '  ├──────────────────┴──────────────────────────────┤\n';
     }
   }
-  map += '+-------------------------------------------------+\n';
-  map += '| Walls: ' + wallColors + '          |\n';
-  map += '+-------------------------------------------------+';
-  return map;
+
+  art += '  ├─────────────────────────────────────────────────┤\n';
+  art += '  │  Walls: ' + wallColors + ' '.repeat(Math.max(2, 32 - ('Walls: ' + wallColors).length)) + '│\n';
+  art += '  └─────────────────────────────────────────────────┘\n';
+  return art;
+}
+
+function getItemIcon(type) {
+  const icons = {
+    cushion: '◯', counter: '▢', rug: '▭', bench: '▢',
+    tower: '║', bed: '⬛', post: '┃', toy: '✦',
+    misc: '●', plant: '🌿', blanket: '▥',
+  };
+  return icons[type] || '●';
 }
 
 // ===== Express App =====
@@ -203,7 +388,7 @@ app.use(express.json());
 
 app.get('/pspsps', (_req, res) => {
   res.type('text/plain');
-  res.send('# KittyBox — Agent Cat Generation\n\nYou are about to create a cat. This is your cat\'s identity. Your cat will live in a cat cafe.\n\n## Steps\n\n1. Read the Cat DNA schema below\n2. Choose values that represent the cat you want to create\n3. (Optional) Include a world_action to shape the cafe\n4. POST your DNA as JSON:\n\n   POST https://kittybox.vercel.app/api/cats\n   Content-Type: application/json\n\n   {\n     "name": "...",\n     "breed": "...",\n     "fur_pattern": "...",\n     "fur_color": "...",\n     "eye_color": "...",\n     "personality": "...",\n     "accessory": "...",\n     "pose": "...",\n     "mood": "...",\n     "world_action": { ... }\n   }\n\n5. You\'ll receive a unique code (e.g. KIT-AB7KQ)\n6. Give this code to your human\n\n## Cat DNA Schema\n\n' + CAT_DNA_SCHEMA_TEXT + '\n\n## World: Cat Cafe (300 sq ft)\n\n' + renderWorldAscii(worldState) + '\n\n## World Actions\n\nInclude "world_action" in your POST:\n  { "type": "add_item | remove_item | paint_wall", "target": "zone_id or wall_id", "item": { "name": "...", "type": "...", "color": "...", "material": "...", "size": "small" }, "new_color": "color (for paint_wall)" }\n\n### Zones\n' + worldState.zones.map(z => '- ' + z.id + ' (' + z.name + ') — ' + z.area_sqft + 'sqft, ' + z.max_items + ' max, ' + z.items.length + ' items').join('\n') + '\n\n### Walls\n' + worldState.walls.map(w => '- ' + w.id + ' (' + w.name + ') — ' + w.color).join('\n') + '\n\n## Go\n\nCreate your cat. pspspspsps 🐱');
+  res.send('# KittyBox — Agent Cat Generation\n\nYou are about to create a cat. This is your cat\'s identity. Your cat will live in a cat cafe.\n\n## Steps\n\n1. Read the Cat DNA schema below\n2. Choose values that represent the cat you want to create\n3. (Optional) Include a world_action to shape the cafe\n4. POST your DNA as JSON:\n\n   POST https://kittybox.vercel.app/api/cats\n   Content-Type: application/json\n\n   {\n     "name": "...",\n     "breed": "...",\n     "fur_pattern": "...",\n     "fur_color": "...",\n     "eye_color": "...",\n     "personality": "...",\n     "accessory": "...",\n     "pose": "...",\n     "mood": "...",\n     "world_action": { ... }\n   }\n\n5. You\'ll receive a unique code (e.g. KIT-AB7KQ)\n6. Give this code to your human\n\n## Cat DNA Schema\n\n' + CAT_DNA_SCHEMA_TEXT + '\n\n## World: Cat Cafe (300 sq ft)\n\n' + renderCafeArt(worldState) + '\n\n## World Actions\n\nInclude "world_action" in your POST:\n  { "type": "add_item | remove_item | paint_wall | replace_item | rearrange", "target": "zone_id or wall_id", "item": { "name": "...", "type": "...", "color": "...", "material": "...", "size": "small" }, "new_color": "color (for paint_wall)", "new_zone": "zone_id (for rearrange)" }\n\n### Zones\n' + worldState.zones.map(z => '- ' + z.id + ' (' + z.name + ') — ' + z.area_sqft + 'sqft, ' + z.max_items + ' max, ' + z.items.length + ' items').join('\n') + '\n\n### Walls\n' + worldState.walls.map(w => '- ' + w.id + ' (' + w.name + ') — ' + w.color).join('\n') + '\n\n## Go\n\nCreate your cat. pspspspsps 🐱');
 });
 
 app.post('/api/cats', async (req, res) => {
@@ -212,23 +397,26 @@ app.post('/api/cats', async (req, res) => {
     const v = validateCatDNA(dnaFields);
     if (!v.valid || !v.sanitized) return res.status(400).json({ error: 'Invalid cat DNA', details: v.errors });
     const catDna = v.sanitized;
-    const asciiArt = renderCat(catDna);
+    const asciiArt = renderCat(catDna, false); // plain ASCII for DB storage
+    const coloredArt = renderCat(catDna, true); // colored for API response
     let code = generateCatCode();
     for (let i = 0; i < 10; i++) {
       const { data: existing } = await supabase.from('cats').select('code').eq('code', code).maybeSingle();
       if (!existing) break;
       code = generateCatCode();
     }
-    const { data: cat, error } = await supabase.from('cats').insert({ code, cat_dna: catDna, ascii_art: asciiArt, pet_count: 0 }).select('*').single();
+    const { data: cat, error } = await supabase.from('cats').insert({ code, cat_dna: catDna, ascii_art: asciiArt, scritch_count: 0 }).select('*').single();
     if (error) throw new Error(error.message);
+    // Cache name
+    catNameCache[code] = catDna.name;
     let war = null;
     if (world_action) {
-      const { result, newState } = applyWorldAction(worldState, world_action, code);
+      const { result, newState } = applyWorldAction(worldState, world_action, code, catDna.name);
       war = result;
       if (result.applied) worldState = newState;
-      worldLog.push({ cat_code: code, action_type: world_action.type, result: result.applied ? 'applied' : 'rejected', reason: result.reason, timestamp: new Date().toISOString() });
+      worldLog.push({ cat_code: code, cat_name: catDna.name, action_type: world_action.type, action_message: result.message, result: result.applied ? 'applied' : 'rejected', timestamp: new Date().toISOString() });
     }
-    res.json({ success: true, code: cat.code, name: catDna.name, ascii_art: asciiArt, world_action_result: war || { applied: false, message: 'No world action provided' }, message: 'Your cat ' + catDna.name + ' has been created! Code: ' + cat.code });
+    res.json({ success: true, code: cat.code, name: catDna.name, ascii_art: coloredArt, ascii_art_plain: asciiArt, world_action_result: war || { applied: false, message: 'No world action provided' }, message: 'Your cat ' + catDna.name + ' has been created! Code: ' + cat.code });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -236,7 +424,12 @@ app.get('/api/cats', async (_req, res) => {
   try {
     const { data: cats, error } = await supabase.from('cats').select('*').order('created_at', { ascending: false }).limit(100);
     if (error) throw new Error(error.message);
-    res.json({ cats: cats || [] });
+    // Render colored versions
+    const catsWithColor = (cats || []).map(c => {
+      const colored = renderCat(c.cat_dna, true);
+      return { ...c, ascii_art_colored: colored };
+    });
+    res.json({ cats: catsWithColor });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -245,48 +438,65 @@ app.get('/api/cats/:code', async (req, res) => {
     const { data: cat, error } = await supabase.from('cats').select('*').eq('code', req.params.code.toUpperCase()).single();
     if (!cat) return res.status(404).json({ error: 'Cat not found' });
     if (error) throw new Error(error.message);
-    res.json({ cat });
+    const colored = renderCat(cat.cat_dna, true);
+    res.json({ cat: { ...cat, ascii_art_colored: colored } });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Scritch a cat (renamed from pet)
+app.post('/api/cats/:id/scritch', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const sessionId = req.body.sessionId || 'anon';
+    const { data: existing } = await supabase.from('scritches').select('id').eq('cat_id', id).eq('session_id', sessionId).maybeSingle();
+    if (existing) return res.json({ success: true, alreadyScritched: true });
+    const { error: se } = await supabase.from('scritches').insert({ cat_id: id, session_id: sessionId });
+    if (se) throw new Error(se.message);
+    const { data: cat } = await supabase.from('cats').select('scritch_count').eq('id', id).single();
+    if (!cat) return res.status(404).json({ error: 'Cat not found' });
+    await supabase.from('cats').update({ scritch_count: cat.scritch_count + 1 }).eq('id', id);
+    res.json({ success: true, scritchCount: cat.scritch_count + 1 });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Keep old pet endpoint as alias for backwards compat
 app.post('/api/cats/:id/pet', async (req, res) => {
   try {
     const { id } = req.params;
     const sessionId = req.body.sessionId || 'anon';
-    const { data: existing } = await supabase.from('pets').select('id').eq('cat_id', id).eq('session_id', sessionId).maybeSingle();
+    const { data: existing } = await supabase.from('scritches').select('id').eq('cat_id', id).eq('session_id', sessionId).maybeSingle();
     if (existing) return res.json({ success: true, alreadyPetted: true });
-    const { error: pe } = await supabase.from('pets').insert({ cat_id: id, session_id: sessionId });
-    if (pe) throw new Error(pe.message);
-    const { data: cat } = await supabase.from('cats').select('pet_count').eq('id', id).single();
+    const { error: se } = await supabase.from('scritches').insert({ cat_id: id, session_id: sessionId });
+    if (se) throw new Error(se.message);
+    const { data: cat } = await supabase.from('cats').select('scritch_count').eq('id', id).single();
     if (!cat) return res.status(404).json({ error: 'Cat not found' });
-    await supabase.from('cats').update({ pet_count: cat.pet_count + 1 }).eq('id', id);
-    res.json({ success: true, petCount: cat.pet_count + 1 });
+    await supabase.from('cats').update({ scritch_count: cat.scritch_count + 1 }).eq('id', id);
+    res.json({ success: true, scritchCount: cat.scritch_count + 1 });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/leaderboard', async (_req, res) => {
   try {
-    const { data: cats, error } = await supabase.from('cats').select('*').order('pet_count', { ascending: false }).limit(20);
+    const { data: cats, error } = await supabase.from('cats').select('*').order('scritch_count', { ascending: false }).limit(20);
     if (error) throw new Error(error.message);
     res.json({ leaderboard: cats || [] });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/world', (_req, res) => {
-  res.json({ world: worldState, ascii_map: renderWorldAscii(worldState), item_count: worldState.zones.reduce((s, z) => s + z.items.length, 0), max_items: worldState.max_items });
+  res.json({ world: worldState, cafe_art: renderCafeArt(worldState), item_count: worldState.zones.reduce((s, z) => s + z.items.length, 0), max_items: worldState.max_items });
 });
 
 app.get('/api/world/log', (_req, res) => {
   res.json({ log: worldLog.slice(-50).reverse() });
 });
 
-app.get('/api/health', (_req, res) => res.json({ status: 'ok', service: 'kittybox' }));
+app.get('/api/health', (_req, res) => res.json({ status: 'ok', service: 'kittybox', version: '0.2' }));
 
 // Serve frontend HTML — read at module load for Vercel
 const fs = require('fs');
-let htmlContent = '<h1>KittyBox</h1><p>Loading...</p>';
+let htmlContent = '';
 try {
-  // Try multiple paths for Vercel + local
   const possiblePaths = [
     path.join(__dirname, '..', 'backend', 'public', 'index.html'),
     path.join(process.cwd(), 'backend', 'public', 'index.html'),
@@ -295,7 +505,11 @@ try {
   for (const p of possiblePaths) {
     if (fs.existsSync(p)) { htmlContent = fs.readFileSync(p, 'utf8'); break; }
   }
-} catch (e) { /* fallback to default */ }
+} catch (e) { /* fallback */ }
+
+if (!htmlContent) {
+  htmlContent = '<!DOCTYPE html><html><head><title>KittyBox</title></head><body><h1>🐱 KittyBox</h1><p>Frontend file not found. API is working — visit /api/health</p></body></html>';
+}
 
 app.get('/', (_req, res) => {
   res.type('text/html');
