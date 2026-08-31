@@ -1,6 +1,9 @@
 {
   "version": 2,
   "buildCommand": "cd backend && npm install",
+  "functions": {
+    "api/index.ts": { "memory": 512 }
+  },
   "rewrites": [
     { "source": "/(.*)", "destination": "/api/index" }
   ]
