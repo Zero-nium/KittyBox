@@ -52,7 +52,7 @@
     @keyframes wiggle { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-3deg); } 75% { transform: rotate(3deg); } }
     @keyframes heartFloat { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-30px) scale(1.5); } }
     
-    .cat-art { white-space: pre; font-size: 0.75rem; line-height: 1.2; color: #c9d1d9; margin-bottom: 10px; min-height: 120px; display: flex; align-items: center; justify-content: center; }
+    .cat-art { white-space: pre; font-size: 0.75rem; line-height: 1.2; color: #c9d1d9; margin: 0 0 10px 0; min-height: 120px; display: flex; align-items: center; justify-content: center; font-family: 'Courier New', monospace; overflow: hidden; }
     .cat-card .cat-name-text { color: #58a6ff; font-weight: bold; font-size: 0.85rem; }
     .cat-card .cat-breed { color: #8b949e; font-size: 0.7rem; margin-top: 3px; }
     .scritch-btn { margin-top: 10px; padding: 5px 15px; background: #21262d; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; cursor: pointer; font-family: 'Courier New', monospace; font-size: 0.8rem; }
@@ -186,6 +186,42 @@
       } catch (e) { document.getElementById('leaderboardList').innerHTML = ''; }
     }
 
+    function ansiToHtml(text) {
+      // First HTML-escape
+      let html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      // Replace ANSI bold
+      html = html.replace(/\x1b\[1m/g, '\x01BOLD\x02');
+      // Replace ANSI dim
+      html = html.replace(/\x1b\[2m/g, '\x01DIM\x02');
+      // Replace ANSI reset
+      html = html.replace(/\x1b\[0m/g, '\x01RESET\x02');
+      // Color map
+      const colorMap = {
+        '\x1b[30m': 'c-grey', '\x1b[31m': 'c-red', '\x1b[32m': 'c-green',
+        '\x1b[33m': 'c-amber', '\x1b[34m': 'c-blue', '\x1b[35m': 'c-magenta',
+        '\x1b[36m': 'c-cyan', '\x1b[37m': 'c-white',
+        '\x1b[90m': 'c-grey', '\x1b[91m': 'c-red', '\x1b[92m': 'c-green',
+        '\x1b[93m': 'c-yellow', '\x1b[94m': 'c-blue', '\x1b[95m': 'c-magenta',
+        '\x1b[96m': 'c-cyan', '\x1b[97m': 'c-white',
+      };
+      for (const [ansi, cls] of Object.entries(colorMap)) {
+        const escaped = ansi.replace(/\[/g, '\\[');
+        html = html.replace(new RegExp(escaped, 'g'), '\x01COLOR:' + cls + '\x02');
+      }
+      // Strip any remaining ANSI codes
+      html = html.replace(/\x1b\[\d+m/g, '');
+      // Convert placeholders to spans
+      html = html.replace(/\x01BOLD\x02/g, '<b>');
+      html = html.replace(/\x01DIM\x02/g, '<span class="c-dim">');
+      html = html.replace(/\x01COLOR:([a-z-]+)\x02/g, '<span class="$1">');
+      html = html.replace(/\x01RESET\x02/g, '</span></b>');
+      // Clean up nested tags — replace sequences of closing tags
+      html = html.replace(/(<\/span>)+(<\/b>)+/g, '</b></span>');
+      html = html.replace(/<\/b><\/b>/g, '</b>');
+      html = html.replace(/<\/span><\/span>/g, '</span>');
+      return html;
+    }
+
     function renderCats(cats) {
       const grid = document.getElementById('catsGrid');
       if (!cats.length) {
@@ -195,16 +231,8 @@
       grid.innerHTML = cats.map(cat => {
         const dna = cat.cat_dna || {};
         const art = cat.ascii_art_colored || cat.ascii_art || '';
-        const artHtml = art.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\x1b\[/g, '||ANSI||');
-        // Convert ANSI to spans
-        let processed = art.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        processed = processed.replace(/\x1b\[1m/g, '<b>').replace(/\x1b\[2m/g, '<span class="c-dim">').replace(/\x1b\[0m/g, '</b></span>');
-        const ansiMap = {'\x1b[30m':'c-grey','\x1b[31m':'c-red','\x1b[32m':'c-green','\x1b[33m':'c-amber','\x1b[34m':'c-blue','\x1b[35m':'c-magenta','\x1b[36m':'c-cyan','\x1b[37m':'c-white','\x1b[90m':'c-grey','\x1b[91m':'c-red','\x1b[92m':'c-green','\x1b[93m':'c-yellow','\x1b[94m':'c-blue','\x1b[95m':'c-magenta','\x1b[96m':'c-cyan','\x1b[97m':'c-white'};
-        for (const [ansi, cls] of Object.entries(ansiMap)) {
-          processed = processed.replace(new RegExp(ansi.replace(/\[/g,'\\['), 'g'), '<span class="' + cls + '">');
-        }
-        processed = processed.replace(/\x1b\[\d+m/g, '');
-        return '<div class="cat-card" id="cat-' + cat.id + '" data-code="' + cat.code + '"><div class="cat-art">' + processed + '</div><div class="cat-name-text">' + (dna.name || 'Unnamed') + '</div><div class="cat-breed">' + (dna.breed || '') + ' · ' + (dna.personality || '') + '</div><div class="scritch-count-display">🐾 ' + (cat.scritch_count || 0) + ' scritches</div><button class="scritch-btn" onclick="scritchCat(\'' + cat.id + '\', this)">Scritch 🐾</button></div>';
+        const processed = ansiToHtml(art);
+        return '<div class="cat-card" id="cat-' + cat.id + '" data-code="' + cat.code + '"><pre class="cat-art">' + processed + '</pre><div class="cat-name-text">' + (dna.name || 'Unnamed') + '</div><div class="cat-breed">' + (dna.breed || '') + ' · ' + (dna.personality || '') + '</div><div class="scritch-count-display">🐾 ' + (cat.scritch_count || 0) + ' scritches</div><button class="scritch-btn" onclick="scritchCat(\'' + cat.id + '\', this)">Scritch 🐾</button></div>';
       }).join('');
     }
 
