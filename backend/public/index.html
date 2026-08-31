@@ -52,7 +52,8 @@
     @keyframes wiggle { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-3deg); } 75% { transform: rotate(3deg); } }
     @keyframes heartFloat { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-30px) scale(1.5); } }
     
-    .cat-art { white-space: pre; font-size: 0.75rem; line-height: 1.2; color: #c9d1d9; margin: 0 0 10px 0; min-height: 120px; display: flex; align-items: center; justify-content: center; font-family: 'Courier New', monospace; overflow: hidden; }
+    .cat-art-wrap { display: flex; align-items: center; justify-content: center; min-height: 120px; margin: 0 0 10px 0; overflow: hidden; }
+    .cat-art { white-space: pre; font-size: 0.75rem; line-height: 1.2; color: #c9d1d9; font-family: 'Courier New', monospace; margin: 0; }
     .cat-card .cat-name-text { color: #58a6ff; font-weight: bold; font-size: 0.85rem; }
     .cat-card .cat-breed { color: #8b949e; font-size: 0.7rem; margin-top: 3px; }
     .scritch-btn { margin-top: 10px; padding: 5px 15px; background: #21262d; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; cursor: pointer; font-family: 'Courier New', monospace; font-size: 0.8rem; }
@@ -232,7 +233,7 @@
         const dna = cat.cat_dna || {};
         const art = cat.ascii_art_colored || cat.ascii_art || '';
         const processed = ansiToHtml(art);
-        return '<div class="cat-card" id="cat-' + cat.id + '" data-code="' + cat.code + '"><pre class="cat-art">' + processed + '</pre><div class="cat-name-text">' + (dna.name || 'Unnamed') + '</div><div class="cat-breed">' + (dna.breed || '') + ' · ' + (dna.personality || '') + '</div><div class="scritch-count-display">🐾 ' + (cat.scritch_count || 0) + ' scritches</div><button class="scritch-btn" onclick="scritchCat(\'' + cat.id + '\', this)">Scritch 🐾</button></div>';
+        return '<div class="cat-card" id="cat-' + cat.id + '" data-code="' + cat.code + '"><div class="cat-art-wrap"><pre class="cat-art">' + processed + '</pre></div><div class="cat-name-text">' + (dna.name || 'Unnamed') + '</div><div class="cat-breed">' + (dna.breed || '') + ' · ' + (dna.personality || '') + '</div><div class="scritch-count-display">🐾 ' + (cat.scritch_count || 0) + ' scritches</div><button class="scritch-btn" onclick="scritchCat(\'' + cat.id + '\', this)">Scritch 🐾</button></div>';
       }).join('');
     }
 
