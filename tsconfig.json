@@ -1,15 +1,13 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "ES2022",
-    "moduleResolution": "bundler",
+    "module": "CommonJS",
+    "moduleResolution": "node",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": false,
     "skipLibCheck": true,
-    "resolveJsonModule": true,
-    "outDir": "./dist",
-    "rootDir": "."
+    "resolveJsonModule": true
   },
-  "include": ["api/**/*", "backend/src/**/*"]
+  "include": ["api/**/*"]
 }
