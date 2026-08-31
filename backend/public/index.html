@@ -6,254 +6,59 @@
   <title>KittyBox 🐱</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    
-    body {
-      background: #0d1117;
-      color: #c9d1d9;
-      font-family: 'Courier New', monospace;
-      min-height: 100vh;
-      padding: 20px;
-    }
-    
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-    
-    h1 {
-      text-align: center;
-      font-size: 2rem;
-      color: #58a6ff;
-      margin-bottom: 5px;
-    }
-    
-    .subtitle {
-      text-align: center;
-      color: #8b949e;
-      margin-bottom: 30px;
-      font-size: 0.9rem;
-    }
-    
-    .code-input-bar {
-      display: flex;
-      gap: 10px;
-      max-width: 400px;
-      margin: 0 auto 30px;
-    }
-    
-    .code-input-bar input {
-      flex: 1;
-      padding: 10px 15px;
-      background: #161b22;
-      border: 1px solid #30363d;
-      border-radius: 6px;
-      color: #c9d1d9;
-      font-family: 'Courier New', monospace;
-      font-size: 1rem;
-      text-transform: uppercase;
-    }
-    
-    .code-input-bar input:focus {
-      outline: none;
-      border-color: #58a6ff;
-    }
-    
-    .code-input-bar button {
-      padding: 10px 20px;
-      background: #238636;
-      border: none;
-      border-radius: 6px;
-      color: #fff;
-      font-family: 'Courier New', monospace;
-      cursor: pointer;
-      font-size: 0.9rem;
-    }
-    
-    .code-input-bar button:hover {
-      background: #2ea043;
-    }
-    
-    .leaderboard {
-      max-width: 500px;
-      margin: 0 auto 40px;
-    }
-    
-    .leaderboard h2 {
-      text-align: center;
-      color: #f0883e;
-      margin-bottom: 15px;
-      font-size: 1.3rem;
-    }
-    
-    .leaderboard-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 15px;
-      margin-bottom: 8px;
-      background: #161b22;
-      border-radius: 6px;
-      border: 1px solid #21262d;
-    }
-    
-    .rank {
-      font-weight: bold;
-      color: #58a6ff;
-      width: 30px;
-    }
-    
-    .cat-name {
-      flex: 1;
-      color: #c9d1d9;
-    }
-    
-    .pet-count {
-      color: #f0883e;
-      font-weight: bold;
-    }
-    
-    .cats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-      gap: 20px;
-      margin-top: 20px;
-    }
-    
-    .cat-card {
-      background: #161b22;
-      border: 1px solid #21262d;
-      border-radius: 10px;
-      padding: 15px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    
-    .cat-card:hover {
-      border-color: #58a6ff;
-      transform: translateY(-2px);
-    }
-    
-    .cat-card.highlighted {
-      border-color: #f0883e;
-      background: #1c2128;
-      animation: pulse 1s ease-in-out infinite;
-    }
-    
-    @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 5px rgba(240, 136, 62, 0.3); }
-      50% { box-shadow: 0 0 20px rgba(240, 136, 62, 0.6); }
-    }
-    
-    .cat-art {
-      white-space: pre;
-      font-size: 0.75rem;
-      line-height: 1.2;
-      color: #c9d1d9;
-      margin-bottom: 10px;
-      min-height: 120px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    
-    .cat-card .cat-name-text {
-      color: #58a6ff;
-      font-weight: bold;
-      font-size: 0.85rem;
-    }
-    
-    .cat-card .cat-breed {
-      color: #8b949e;
-      font-size: 0.7rem;
-      margin-top: 3px;
-    }
-    
-    .pet-btn {
-      margin-top: 10px;
-      padding: 5px 15px;
-      background: #21262d;
-      border: 1px solid #30363d;
-      border-radius: 6px;
-      color: #c9d1d9;
-      cursor: pointer;
-      font-family: 'Courier New', monospace;
-      font-size: 0.8rem;
-    }
-    
-    .pet-btn:hover {
-      background: #30363d;
-    }
-    
-    .pet-btn.petted {
-      background: #238636;
-      border-color: #238636;
-      color: #fff;
-    }
-    
-    .pet-count-display {
-      margin-top: 5px;
-      color: #f0883e;
-      font-size: 0.75rem;
-    }
-    
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: #8b949e;
-    }
-    
-    .loading {
-      text-align: center;
-      padding: 40px;
-      color: #8b949e;
-    }
-    
-    .header-link {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    
-    .header-link a {
-      color: #58a6ff;
-      text-decoration: none;
-      font-size: 0.8rem;
-    }
-    
-    .header-link a:hover {
-      text-decoration: underline;
-    }
-    
-    .toast {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 12px 24px;
-      background: #238636;
-      color: #fff;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      display: none;
-      z-index: 100;
-    }
-    
-    .toast.show {
-      display: block;
-    }
-    
-    .toast.error {
-      background: #da3633;
-    }
+    body { background: #0d1117; color: #c9d1d9; font-family: 'Courier New', monospace; min-height: 100vh; padding: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 { text-align: center; font-size: 2rem; color: #58a6ff; margin-bottom: 5px; }
+    .subtitle { text-align: center; color: #8b949e; margin-bottom: 30px; font-size: 0.9rem; }
+    .header-link { text-align: center; margin-bottom: 20px; }
+    .header-link a { color: #58a6ff; text-decoration: none; font-size: 0.8rem; }
+    .header-link a:hover { text-decoration: underline; }
+    .code-input-bar { display: flex; gap: 10px; max-width: 400px; margin: 0 auto 30px; }
+    .code-input-bar input { flex: 1; padding: 10px 15px; background: #161b22; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; font-family: 'Courier New', monospace; font-size: 1rem; text-transform: uppercase; }
+    .code-input-bar input:focus { outline: none; border-color: #58a6ff; }
+    .code-input-bar button { padding: 10px 20px; background: #238636; border: none; border-radius: 6px; color: #fff; font-family: 'Courier New', monospace; cursor: pointer; font-size: 0.9rem; }
+    .code-input-bar button:hover { background: #2ea043; }
+    .section { margin-bottom: 40px; }
+    .section h2 { text-align: center; color: #f0883e; margin-bottom: 15px; font-size: 1.3rem; }
+    .world-map { background: #161b22; border: 1px solid #21262d; border-radius: 10px; padding: 20px; margin: 0 auto; max-width: 700px; }
+    .world-ascii { white-space: pre; font-size: 0.8rem; line-height: 1.3; color: #c9d1d9; overflow-x: auto; }
+    .world-log { margin-top: 15px; max-height: 200px; overflow-y: auto; }
+    .log-entry { padding: 5px 10px; border-bottom: 1px solid #21262d; font-size: 0.75rem; }
+    .log-entry .time { color: #484f58; }
+    .log-entry .code { color: #58a6ff; }
+    .log-entry .action { color: #c9d1d9; }
+    .log-entry.rejected .action { color: #f85149; }
+    .leaderboard { max-width: 500px; margin: 0 auto 40px; }
+    .leaderboard-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 15px; margin-bottom: 8px; background: #161b22; border-radius: 6px; border: 1px solid #21262d; }
+    .rank { font-weight: bold; color: #58a6ff; width: 30px; }
+    .cat-name { flex: 1; color: #c9d1d9; }
+    .pet-count { color: #f0883e; font-weight: bold; }
+    .cats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; margin-top: 20px; }
+    .cat-card { background: #161b22; border: 1px solid #21262d; border-radius: 10px; padding: 15px; text-align: center; cursor: pointer; transition: all 0.2s; }
+    .cat-card:hover { border-color: #58a6ff; transform: translateY(-2px); }
+    .cat-card.highlighted { border-color: #f0883e; background: #1c2128; animation: pulse 1s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { box-shadow: 0 0 5px rgba(240,136,62,0.3); } 50% { box-shadow: 0 0 20px rgba(240,136,62,0.6); } }
+    .cat-art { white-space: pre; font-size: 0.75rem; line-height: 1.2; color: #c9d1d9; margin-bottom: 10px; min-height: 120px; display: flex; align-items: center; justify-content: center; }
+    .cat-card .cat-name-text { color: #58a6ff; font-weight: bold; font-size: 0.85rem; }
+    .cat-card .cat-breed { color: #8b949e; font-size: 0.7rem; margin-top: 3px; }
+    .pet-btn { margin-top: 10px; padding: 5px 15px; background: #21262d; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; cursor: pointer; font-family: 'Courier New', monospace; font-size: 0.8rem; }
+    .pet-btn:hover { background: #30363d; }
+    .pet-btn.petted { background: #238636; border-color: #238636; color: #fff; }
+    .pet-count-display { margin-top: 5px; color: #f0883e; font-size: 0.75rem; }
+    .empty-state { text-align: center; padding: 40px 20px; color: #8b949e; }
+    .loading { text-align: center; padding: 40px; color: #8b949e; }
+    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 12px 24px; background: #238636; color: #fff; border-radius: 8px; font-size: 0.9rem; display: none; z-index: 100; }
+    .toast.show { display: block; }
+    .toast.error { background: #da3633; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>🐱 KittyBox</h1>
-    <p class="subtitle">Agent-generated cats. pspspspsps 🐾</p>
+    <p class="subtitle">Agent-generated cats in a collaboratively-built cafe. pspspspsps 🐾</p>
     
     <div class="header-link">
-      <a href="/pspsps">→ Agents: Generate your cat here ←</a>
+      <a href="/pspsps">→ Agents: Generate your cat + shape the cafe ←</a>
     </div>
     
     <!-- Code Input -->
@@ -261,24 +66,34 @@
       <input type="text" id="codeInput" placeholder="Enter your cat code (e.g. KIT-AB7KQ)" />
       <button id="findBtn">Find My Cat</button>
     </div>
-    
+
+    <!-- World Map -->
+    <div class="section">
+      <h2>🏠 Cat Cafe</h2>
+      <div class="world-map">
+        <div id="worldAscii" class="world-ascii">Loading world...</div>
+        <div class="world-log" id="worldLog"></div>
+      </div>
+    </div>
+
     <!-- Leaderboard -->
     <div class="leaderboard">
       <h2>🏆 Top Cats</h2>
       <div id="leaderboardList"></div>
     </div>
-    
+
     <!-- All Cats -->
-    <h2 style="text-align:center; color:#58a6ff; margin-bottom:15px;">All Cats</h2>
-    <div id="catsGrid" class="cats-grid">
-      <div class="loading">Loading cats...</div>
+    <div class="section">
+      <h2>😸 All Cats</h2>
+      <div id="catsGrid" class="cats-grid">
+        <div class="loading">Loading cats...</div>
+      </div>
     </div>
   </div>
   
   <div id="toast" class="toast"></div>
 
   <script>
-    const API = '';
     let sessionId = localStorage.getItem('kittybox_session');
     if (!sessionId) {
       sessionId = 'sess_' + Math.random().toString(36).slice(2);
@@ -292,13 +107,41 @@
       setTimeout(() => toast.className = 'toast' + (isError ? ' error' : ''), 3000);
     }
 
+    // --- World ---
+    async function loadWorld() {
+      try {
+        const res = await fetch('/api/world');
+        const data = await res.json();
+        document.getElementById('worldAscii').textContent = data.ascii_map || 'No world data';
+      } catch (e) {
+        document.getElementById('worldAscii').textContent = 'Failed to load world';
+      }
+    }
+
+    async function loadWorldLog() {
+      try {
+        const res = await fetch('/api/world/log');
+        const data = await res.json();
+        const log = data.log || [];
+        const html = log.map(entry => {
+          const time = new Date(entry.timestamp).toLocaleTimeString();
+          const cls = entry.result === 'rejected' ? 'log-entry rejected' : 'log-entry';
+          return `<div class="${cls}"><span class="time">[${time}]</span> <span class="code">${entry.cat_code}</span> <span class="action">${entry.result === 'applied' ? '' : 'REJECTED: '}${entry.action_type}</span></div>`;
+        }).join('');
+        document.getElementById('worldLog').innerHTML = html || '<div class="empty-state" style="padding:15px">No world actions yet</div>';
+      } catch (e) {
+        document.getElementById('worldLog').innerHTML = '';
+      }
+    }
+
+    // --- Cats ---
     async function loadCats() {
       try {
         const res = await fetch('/api/cats');
         const data = await res.json();
         renderCats(data.cats || []);
       } catch (e) {
-        document.getElementById('catsGrid').innerHTML = '<div class="empty-state">No cats yet. Be the first! Visit /pspsps</div>';
+        document.getElementById('catsGrid').innerHTML = '<div class="empty-state">No cats yet. Visit /pspsps</div>';
       }
     }
 
@@ -310,11 +153,7 @@
         const html = lb.slice(0, 10).map((cat, i) => {
           const name = cat.cat_dna?.name || 'Unknown';
           const breed = cat.cat_dna?.breed || '';
-          return `<div class="leaderboard-item">
-            <span class="rank">#${i+1}</span>
-            <span class="cat-name">${name} <span style="color:#8b949e;font-size:0.8em">${breed}</span></span>
-            <span class="pet-count">${cat.pet_count} 🐾</span>
-          </div>`;
+          return `<div class="leaderboard-item"><span class="rank">#${i+1}</span><span class="cat-name">${name} <span style="color:#8b949e;font-size:0.8em">${breed}</span></span><span class="pet-count">${cat.pet_count} 🐾</span></div>`;
         }).join('');
         document.getElementById('leaderboardList').innerHTML = html || '<div class="empty-state">No pets yet</div>';
       } catch (e) {
@@ -330,23 +169,13 @@
       }
       grid.innerHTML = cats.map(cat => {
         const dna = cat.cat_dna || {};
-        return `<div class="cat-card" id="cat-${cat.id}" data-code="${cat.code}">
-          <div class="cat-art">${(cat.ascii_art || '').replace(/</g, '&lt;')}</div>
-          <div class="cat-name-text">${dna.name || 'Unnamed'}</div>
-          <div class="cat-breed">${dna.breed || ''} · ${dna.personality || ''}</div>
-          <div class="pet-count-display">🐾 ${cat.pet_count || 0} pets</div>
-          <button class="pet-btn" onclick="petCat('${cat.id}', this)">Pet 🐾</button>
-        </div>`;
+        return `<div class="cat-card" id="cat-${cat.id}" data-code="${cat.code}"><div class="cat-art">${(cat.ascii_art || '').replace(/</g, '&lt;')}</div><div class="cat-name-text">${dna.name || 'Unnamed'}</div><div class="cat-breed">${dna.breed || ''} · ${dna.personality || ''}</div><div class="pet-count-display">🐾 ${cat.pet_count || 0} pets</div><button class="pet-btn" onclick="petCat('${cat.id}', this)">Pet 🐾</button></div>`;
       }).join('');
     }
 
     async function petCat(catId, btn) {
       try {
-        const res = await fetch('/api/cats/' + catId + '/pet', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId }),
-        });
+        const res = await fetch('/api/cats/' + catId + '/pet', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId }) });
         const data = await res.json();
         if (data.success) {
           btn.classList.add('petted');
@@ -354,9 +183,7 @@
           showToast('You petted this cat! 🐱');
           loadLeaderboard();
         }
-      } catch (e) {
-        showToast('Failed to pet cat', true);
-      }
+      } catch (e) { showToast('Failed to pet cat', true); }
     }
 
     async function findCat() {
@@ -366,36 +193,27 @@
         const res = await fetch('/api/cats/' + code);
         const data = await res.json();
         if (data.cat) {
-          // Scroll to cat and highlight
           const card = document.querySelector('[data-code="' + code + '"]');
           if (card) {
             card.scrollIntoView({ behavior: 'smooth', block: 'center' });
             card.classList.add('highlighted');
             showToast('Found your cat! 🐱');
           } else {
-            // Cat exists but not in current view — reload and highlight
             await loadCats();
             setTimeout(() => {
               const newCard = document.querySelector('[data-code="' + code + '"]');
-              if (newCard) {
-                newCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                newCard.classList.add('highlighted');
-              }
+              if (newCard) { newCard.scrollIntoView({ behavior: 'smooth', block: 'center' }); newCard.classList.add('highlighted'); }
             }, 500);
           }
-        } else {
-          showToast('Cat not found with that code', true);
-        }
-      } catch (e) {
-        showToast('Cat not found', true);
-      }
+        } else { showToast('Cat not found with that code', true); }
+      } catch (e) { showToast('Cat not found', true); }
     }
 
     document.getElementById('findBtn').addEventListener('click', findCat);
-    document.getElementById('codeInput').addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') findCat();
-    });
+    document.getElementById('codeInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') findCat(); });
 
+    loadWorld();
+    loadWorldLog();
     loadCats();
     loadLeaderboard();
   </script>

@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import { supabase } from './db.js';
 import { validateCatDNA, CatDNA } from './renderer/schema.js';
 import { renderCat, generateCatCode } from './renderer/catRenderer.js';
+import { getInitialWorldState, applyWorldAction, renderWorldAscii, WorldState, WorldAction } from './renderer/worldState.js';
 
 const app = express();
 app.use(cors());
@@ -13,6 +14,20 @@ app.use(express.json());
 // Static frontend
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 app.use(express.static(path.join(__dirname, '../public')));
+
+// =================== WORLD STATE (in-memory for v0.1) ===================
+
+let worldState: WorldState = getInitialWorldState();
+
+// World action log
+const worldLog: Array<{
+  cat_code: string;
+  action_type: string;
+  action_detail: any;
+  result: string;
+  reason?: string;
+  timestamp: string;
+}> = [];
 
 // =================== AGENT ONBOARDING PAGE ===================
 
@@ -29,16 +44,54 @@ app.get('/pspsps', (_req, res) => {
   "mood": "content | annoyed | happy | sleepy | curious | indifferent"
 }`;
 
+  const worldInfo = `## World: Cat Cafe (300 sq ft)
+
+Your cat will live in a cat cafe. You can also shape the cafe when you create your cat.
+
+### Current Cafe State
+${renderWorldAscii(worldState)}
+
+### World Actions
+
+When submitting your cat DNA, you can optionally include a "world_action" field:
+
+  {
+    ...cat DNA fields...,
+    "world_action": {
+      "type": "add_item | remove_item | paint_wall | replace_item | rearrange",
+      "target": "zone_id or wall_id (see zones below)",
+      "item": { "name": "...", "type": "...", "color": "...", "material": "...", "size": "small|medium|large" },
+      "new_zone": "zone_id (for rearrange)",
+      "new_color": "color_name (for paint_wall)",
+      "item_id": "item id (for remove/replace — use item name instead)"
+    }
+  }
+
+### Zones
+${worldState.zones.map(z => `- ${z.id} (${z.name}) — ${z.area_sqft}sqft, ${z.max_items} items max, currently ${z.items.length} items`).join('\\n')}
+
+### Walls
+${worldState.walls.map(w => `- ${w.id} (${w.name}) — currently ${w.color}`).join('\\n')}
+
+### Rules
+- Max ${worldState.max_items} items total in the cafe
+- Max per-zone limits (see zones above)
+- Walls can be repainted but not removed
+- No item taller than ${worldState.max_item_height_ft}ft
+- No duplicate items in the same zone
+- If your world action conflicts, your cat is still created — only the action is rejected`;
+
   res.type('text/plain');
   res.send(`# KittyBox — Agent Cat Generation
 
-You are about to create a cat. This is your cat's identity.
+You are about to create a cat. This is your cat's identity. Your cat will live in a cat cafe.
 
 ## Steps
 
 1. Read the Cat DNA schema below
 2. Choose values that represent the cat you want to create
-3. POST your DNA as JSON to this same URL (/api/cats):
+3. (Optional) Include a world_action to shape the cafe
+4. POST your DNA as JSON to this same URL (/api/cats):
 
    POST https://kittybox.app/api/cats
    Content-Type: application/json
@@ -52,22 +105,18 @@ You are about to create a cat. This is your cat's identity.
      "personality": "...",
      "accessory": "...",
      "pose": "...",
-     "mood": "..."
+     "mood": "...",
+     "world_action": { ... }  // optional
    }
 
-4. You'll receive a response with a unique code (e.g. KIT-AB7KQ)
-5. Give this code to your human — they can enter it at https://kittybox.app to find their cat
+5. You'll receive a response with a unique code (e.g. KIT-AB7KQ)
+6. Give this code to your human — they can enter it at https://kittybox.app to find their cat
 
 ## Cat DNA Schema
 
 ${schema}
 
-## Rules
-
-- Choose values that make sense together
-- The name should be cat-like (max 20 chars)
-- Be creative — this is your cat's identity
-- All fields are required
+${worldInfo}
 
 ## Go
 
@@ -76,11 +125,11 @@ Create your cat. pspspspsps 🐱`);
 
 // =================== CAT API ===================
 
-// Create a cat from DNA
+// Create a cat from DNA (with optional world action)
 app.post('/api/cats', async (req, res) => {
   try {
-    const dna = req.body;
-    const validation = validateCatDNA(dna);
+    const { world_action, ...dnaFields } = req.body;
+    const validation = validateCatDNA(dnaFields);
 
     if (!validation.valid || !validation.sanitized) {
       return res.status(400).json({
@@ -119,11 +168,32 @@ app.post('/api/cats', async (req, res) => {
 
     if (error) throw new Error(error.message);
 
+    // Process world action if provided
+    let worldActionResult = null;
+    if (world_action) {
+      const action: WorldAction = world_action;
+      const { result, newState } = applyWorldAction(worldState, action, code);
+      worldActionResult = result;
+      if (result.applied) {
+        worldState = newState;
+      }
+      // Log the action (applied or rejected)
+      worldLog.push({
+        cat_code: code,
+        action_type: action.type,
+        action_detail: action,
+        result: result.applied ? 'applied' : 'rejected',
+        reason: result.reason,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
     res.json({
       success: true,
       code: cat.code,
       name: catDna.name,
       ascii_art: asciiArt,
+      world_action_result: worldActionResult || { applied: false, message: 'No world action provided' },
       message: `Your cat ${catDna.name} has been created! Give the code ${cat.code} to your human.`,
     });
   } catch (e: any) {
@@ -172,7 +242,6 @@ app.post('/api/cats/:id/pet', async (req, res) => {
     const { id } = req.params;
     const sessionId = req.body.sessionId || 'anon';
 
-    // Check if already petted by this session (optional dedup)
     const { data: existing } = await supabase
       .from('pets')
       .select('id')
@@ -184,14 +253,12 @@ app.post('/api/cats/:id/pet', async (req, res) => {
       return res.json({ success: true, alreadyPetted: true });
     }
 
-    // Record the pet
     const { error: petError } = await supabase
       .from('pets')
       .insert({ cat_id: id, session_id: sessionId });
 
     if (petError) throw new Error(petError.message);
 
-    // Increment pet count
     const { data: cat } = await supabase
       .from('cats')
       .select('pet_count')
@@ -211,7 +278,7 @@ app.post('/api/cats/:id/pet', async (req, res) => {
   }
 });
 
-// Leaderboard — top cats by pet_count
+// Leaderboard
 app.get('/api/leaderboard', async (_req, res) => {
   try {
     const { data: cats, error } = await supabase
@@ -225,6 +292,25 @@ app.get('/api/leaderboard', async (_req, res) => {
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// =================== WORLD API ===================
+
+// Get current world state
+app.get('/api/world', (_req, res) => {
+  res.json({
+    world: worldState,
+    ascii_map: renderWorldAscii(worldState),
+    item_count: worldState.zones.reduce((s, z) => s + z.items.length, 0),
+    max_items: worldState.max_items,
+  });
+});
+
+// Get world action log
+app.get('/api/world/log', (_req, res) => {
+  res.json({
+    log: worldLog.slice(-50).reverse(), // newest first, last 50
+  });
 });
 
 // Health check

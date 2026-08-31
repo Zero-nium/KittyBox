@@ -32,18 +32,32 @@ CREATE TABLE IF NOT EXISTS donations (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- world_log table (environment collaboration log)
+CREATE TABLE IF NOT EXISTS world_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cat_code TEXT,
+  action_type TEXT NOT NULL,
+  action_detail JSONB,
+  result TEXT NOT NULL DEFAULT 'applied',
+  reason TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- Index for leaderboard queries
 CREATE INDEX IF NOT EXISTS cats_pet_count_idx ON cats(pet_count DESC);
 CREATE INDEX IF NOT EXISTS pets_cat_id_idx ON pets(cat_id);
+CREATE INDEX IF NOT EXISTS world_log_created_at_idx ON world_log(created_at DESC);
 
 -- Enable RLS (Row Level Security)
 ALTER TABLE cats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE donations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE world_log ENABLE ROW LEVEL SECURITY;
 
 -- Policy: anyone can read cats and pets (public leaderboard)
 CREATE POLICY "Cats are publicly readable" ON cats FOR SELECT USING (true);
 CREATE POLICY "Pets are publicly readable" ON pets FOR SELECT USING (true);
+CREATE POLICY "World log is publicly readable" ON world_log FOR SELECT USING (true);
 
 -- Note: Writes go through the service role key (server-side only),
 -- so we don't need public write policies.
