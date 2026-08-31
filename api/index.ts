@@ -282,9 +282,24 @@ app.get('/api/world/log', (_req, res) => {
 
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', service: 'kittybox' }));
 
-// Serve frontend HTML
+// Serve frontend HTML — read at module load for Vercel
+const fs = require('fs');
+let htmlContent = '<h1>KittyBox</h1><p>Loading...</p>';
+try {
+  // Try multiple paths for Vercel + local
+  const possiblePaths = [
+    path.join(__dirname, '..', 'backend', 'public', 'index.html'),
+    path.join(process.cwd(), 'backend', 'public', 'index.html'),
+    path.join(__dirname, 'backend', 'public', 'index.html'),
+  ];
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) { htmlContent = fs.readFileSync(p, 'utf8'); break; }
+  }
+} catch (e) { /* fallback to default */ }
+
 app.get('/', (_req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'backend', 'public', 'index.html'));
+  res.type('text/html');
+  res.send(htmlContent);
 });
 
 module.exports = app;
