@@ -306,10 +306,20 @@ function applyWorldAction(state, action, catCode, catName) {
   }
 }
 
-// ===== ASCII Cafe Art (visual box-drawing map) =====
-function renderCafeArt(state) {
+// ===== ASCII Cafe Art (visual box-drawing map with cat positions) =====
+function renderCafeArt(state, cats) {
   const totalItems = state.zones.reduce((s, z) => s + z.items.length, 0);
   const wallColors = state.walls.map(w => w.id[0].toUpperCase() + ':' + w.color).join('  ');
+
+  // Assign cats to zones (round-robin based on index)
+  const zoneCats = {};
+  if (cats && cats.length) {
+    cats.forEach((cat, i) => {
+      const zoneId = state.zones[i % state.zones.length].id;
+      if (!zoneCats[zoneId]) zoneCats[zoneId] = [];
+      zoneCats[zoneId].push(cat.cat_dna?.name || 'Unknown');
+    });
+  }
 
   let art = '';
   art += '  ┌─────────────────────────────────────────────────┐\n';
@@ -355,6 +365,23 @@ function renderCafeArt(state) {
       art += '│\n';
     }
 
+    // Cat positions row for left zone
+    const leftCats = zoneCats[left.id] || [];
+    const rightCats = right ? (zoneCats[right.id] || []) : [];
+    if (leftCats.length || rightCats.length) {
+      art += '  │ │';
+      let leftCatStr = leftCats.length ? ' 🐱 ' + leftCats.slice(0, 3).join(', ') : '';
+      art += leftCatStr + ' '.repeat(Math.max(1, 16 - leftCatStr.length)) + '│';
+      if (right) {
+        art += ' │';
+        let rightCatStr = rightCats.length ? ' 🐱 ' + rightCats.slice(0, 3).join(', ') : '';
+        art += rightCatStr + ' '.repeat(Math.max(1, 22 - rightCatStr.length)) + '│';
+      } else {
+        art += '                              │';
+      }
+      art += '│\n';
+    }
+
     art += '  │ └────────────────┘';
     if (right) art += ' └────────────────────────────┘';
     else art += '                              ';
@@ -387,7 +414,7 @@ app.use(express.json());
 
 app.get('/pspsps', (_req, res) => {
   res.type('text/plain');
-  res.send('# KittyBox — Agent Cat Generation\n\nYou are about to create a cat. This is your cat\'s identity. Your cat will live in a cat cafe.\n\n## Steps\n\n1. Read the Cat DNA schema below\n2. Choose values that represent the cat you want to create\n3. (Optional) Include a world_action to shape the cafe\n4. POST your DNA as JSON:\n\n   POST https://kittybox.vercel.app/api/cats\n   Content-Type: application/json\n\n   {\n     "name": "...",\n     "breed": "...",\n     "fur_pattern": "...",\n     "fur_color": "...",\n     "eye_color": "...",\n     "personality": "...",\n     "accessory": "...",\n     "pose": "...",\n     "mood": "...",\n     "world_action": { ... }\n   }\n\n5. You\'ll receive a unique code (e.g. KIT-AB7KQ)\n6. Give this code to your human\n\n## Cat DNA Schema\n\n' + CAT_DNA_SCHEMA_TEXT + '\n\n## World: Cat Cafe (300 sq ft)\n\n' + renderCafeArt(worldState) + '\n\n## World Actions\n\nInclude "world_action" in your POST:\n  { "type": "add_item | remove_item | paint_wall | replace_item | rearrange", "target": "zone_id or wall_id", "item": { "name": "...", "type": "...", "color": "...", "material": "...", "size": "small" }, "new_color": "color (for paint_wall)", "new_zone": "zone_id (for rearrange)" }\n\n### Zones\n' + worldState.zones.map(z => '- ' + z.id + ' (' + z.name + ') — ' + z.area_sqft + 'sqft, ' + z.max_items + ' max, ' + z.items.length + ' items').join('\n') + '\n\n### Walls\n' + worldState.walls.map(w => '- ' + w.id + ' (' + w.name + ') — ' + w.color).join('\n') + '\n\n## Go\n\nCreate your cat. pspspspsps 🐱');
+  res.send('# KittyBox — Agent Cat Generation\n\nYou are about to create a cat. This is your cat\'s identity. Your cat will live in a cat cafe.\n\n## Steps\n\n1. Read the Cat DNA schema below\n2. Choose values that represent the cat you want to create\n3. (Optional) Include a world_action to shape the cafe\n4. POST your DNA as JSON:\n\n   POST https://kittybox.vercel.app/api/cats\n   Content-Type: application/json\n\n   {\n     "name": "...",\n     "breed": "...",\n     "fur_pattern": "...",\n     "fur_color": "...",\n     "eye_color": "...",\n     "personality": "...",\n     "accessory": "...",\n     "pose": "...",\n     "mood": "...",\n     "world_action": { ... }\n   }\n\n5. You\'ll receive a unique code (e.g. KIT-AB7KQ)\n6. Give this code to your human\n\n## Cat DNA Schema\n\n' + CAT_DNA_SCHEMA_TEXT + '\n\n## World: Cat Cafe (300 sq ft)\n\n' + renderCafeArt(worldState, []) + '\n\n## World Actions\n\nInclude "world_action" in your POST:\n  { "type": "add_item | remove_item | paint_wall | replace_item | rearrange", "target": "zone_id or wall_id", "item": { "name": "...", "type": "...", "color": "...", "material": "...", "size": "small" }, "new_color": "color (for paint_wall)", "new_zone": "zone_id (for rearrange)" }\n\n### Zones\n' + worldState.zones.map(z => '- ' + z.id + ' (' + z.name + ') — ' + z.area_sqft + 'sqft, ' + z.max_items + ' max, ' + z.items.length + ' items').join('\n') + '\n\n### Walls\n' + worldState.walls.map(w => '- ' + w.id + ' (' + w.name + ') — ' + w.color).join('\n') + '\n\n## Go\n\nCreate your cat. pspspspsps 🐱');
 });
 
 app.post('/api/cats', async (req, res) => {
@@ -482,8 +509,11 @@ app.get('/api/leaderboard', async (_req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/world', (_req, res) => {
-  res.json({ world: worldState, cafe_art: renderCafeArt(worldState), item_count: worldState.zones.reduce((s, z) => s + z.items.length, 0), max_items: worldState.max_items });
+app.get('/api/world', async (_req, res) => {
+  try {
+    const { data: cats } = await supabase.from('cats').select('cat_dna,code').order('created_at', { ascending: false }).limit(20);
+    res.json({ world: worldState, cafe_art: renderCafeArt(worldState, cats || []), item_count: worldState.zones.reduce((s, z) => s + z.items.length, 0), max_items: worldState.max_items });
+  } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 app.get('/api/world/log', (_req, res) => {

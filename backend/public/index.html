@@ -21,18 +21,29 @@
     .section { margin-bottom: 40px; }
     .section h2 { text-align: center; color: #f0883e; margin-bottom: 15px; font-size: 1.3rem; }
     
+    /* Tabs */
+    .tabs { display: flex; gap: 0; margin: 0 auto 0; max-width: 700px; border-bottom: 1px solid #21262d; }
+    .tab-btn { padding: 10px 20px; background: transparent; border: none; border-bottom: 2px solid transparent; color: #8b949e; cursor: pointer; font-family: 'Courier New', monospace; font-size: 0.9rem; transition: all 0.2s; }
+    .tab-btn:hover { color: #c9d1d9; }
+    .tab-btn.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    
     /* Cafe Art */
-    .cafe-art-container { background: #161b22; border: 1px solid #21262d; border-radius: 10px; padding: 20px; margin: 0 auto; max-width: 700px; overflow-x: auto; }
+    .cafe-art-container { background: #161b22; border: 1px solid #21262d; border-radius: 0 10px 10px 10px; padding: 20px; margin: 0 auto; max-width: 700px; overflow-x: auto; }
     .cafe-ascii { white-space: pre; font-size: 0.72rem; line-height: 1.3; color: #c9d1d9; }
     
-    /* World Log */
-    .world-log { margin-top: 15px; max-height: 200px; overflow-y: auto; }
-    .log-entry { padding: 6px 12px; border-bottom: 1px solid #21262d; font-size: 0.75rem; display: flex; gap: 8px; }
+    /* Changes Log */
+    .changes-container { background: #161b22; border: 1px solid #21262d; border-radius: 0 10px 10px 10px; padding: 20px; margin: 0 auto; max-width: 700px; max-height: 400px; overflow-y: auto; }
+    .log-entry { padding: 8px 12px; border-bottom: 1px solid #21262d; font-size: 0.8rem; display: flex; gap: 10px; align-items: flex-start; }
+    .log-entry:last-child { border-bottom: none; }
     .log-entry .time { color: #484f58; flex-shrink: 0; }
-    .log-entry .cat { color: #58a6ff; flex-shrink: 0; }
-    .log-entry .action { color: #c9d1d9; }
-    .log-entry.rejected .action { color: #f85149; }
-    .log-entry .check { color: #2ea043; }
+    .log-entry .cat-name { color: #58a6ff; flex-shrink: 0; min-width: 80px; }
+    .log-entry .action-text { color: #c9d1d9; }
+    .log-entry.rejected .action-text { color: #f85149; }
+    .log-entry .check { color: #2ea043; flex-shrink: 0; }
+    .log-entry .x { color: #f85149; flex-shrink: 0; }
+    .empty-state { text-align: center; padding: 40px 20px; color: #8b949e; }
     
     /* Leaderboard */
     .leaderboard { max-width: 500px; margin: 0 auto 40px; }
@@ -49,7 +60,6 @@
     .cat-card.scritching { animation: bounce 0.4s ease; }
     @keyframes pulse { 0%, 100% { box-shadow: 0 0 5px rgba(240,136,62,0.3); } 50% { box-shadow: 0 0 20px rgba(240,136,62,0.6); } }
     @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-    @keyframes wiggle { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-3deg); } 75% { transform: rotate(3deg); } }
     @keyframes heartFloat { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-30px) scale(1.5); } }
     
     .cat-art-wrap { display: flex; align-items: center; justify-content: center; min-height: 120px; margin: 0 0 10px 0; overflow: hidden; }
@@ -61,7 +71,6 @@
     .scritch-btn.scritched { background: #238636; border-color: #238636; color: #fff; }
     .scritch-count-display { margin-top: 5px; color: #f0883e; font-size: 0.75rem; }
     .heart { position: absolute; font-size: 1.2rem; color: #f0883e; pointer-events: none; animation: heartFloat 1s ease-out forwards; }
-    .empty-state { text-align: center; padding: 40px 20px; color: #8b949e; }
     .loading { text-align: center; padding: 40px; color: #8b949e; }
     .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 12px 24px; background: #238636; color: #fff; border-radius: 8px; font-size: 0.9rem; display: none; z-index: 100; }
     .toast.show { display: block; }
@@ -79,6 +88,11 @@
     .c-cyan { color: #39c5cf; }
     .c-red { color: #f85149; }
     b { font-weight: bold; }
+    
+    /* Cat position legend */
+    .cat-legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #21262d; }
+    .cat-legend-item { display: flex; align-items: center; gap: 4px; font-size: 0.7rem; color: #8b949e; }
+    .cat-legend-icon { font-size: 0.9rem; }
   </style>
 </head>
 <body>
@@ -95,11 +109,27 @@
       <button id="findBtn">Find My Cat</button>
     </div>
 
+    <!-- Cafe Section with Tabs -->
     <div class="section">
       <h2>🏠 Cat Cafe</h2>
-      <div class="cafe-art-container">
-        <div id="cafeArt" class="cafe-ascii">Loading cafe...</div>
-        <div class="world-log" id="worldLog"></div>
+      <div class="tabs">
+        <button class="tab-btn active" id="tab-changes" onclick="switchTab('changes')">📝 Changes Log</button>
+        <button class="tab-btn" id="tab-render" onclick="switchTab('render')">🗺️ Room Render</button>
+      </div>
+      
+      <!-- Tab 1: Changes Log (default) -->
+      <div class="tab-content active" id="tab-content-changes">
+        <div class="changes-container">
+          <div id="changesLog"><div class="empty-state">No cafe changes yet</div></div>
+        </div>
+      </div>
+      
+      <!-- Tab 2: Room Render -->
+      <div class="tab-content" id="tab-content-render">
+        <div class="cafe-art-container">
+          <div id="cafeArt" class="cafe-ascii">Loading cafe...</div>
+          <div class="cat-legend" id="catLegend"></div>
+        </div>
       </div>
     </div>
 
@@ -143,6 +173,13 @@
       setTimeout(() => heart.remove(), 1000);
     }
 
+    function switchTab(tab) {
+      document.getElementById('tab-changes').classList.toggle('active', tab === 'changes');
+      document.getElementById('tab-render').classList.toggle('active', tab === 'render');
+      document.getElementById('tab-content-changes').classList.toggle('active', tab === 'changes');
+      document.getElementById('tab-content-render').classList.toggle('active', tab === 'render');
+    }
+
     async function loadWorld() {
       try {
         const res = await fetch('/api/world');
@@ -151,18 +188,25 @@
       } catch (e) { document.getElementById('cafeArt').textContent = 'Failed to load cafe'; }
     }
 
-    async function loadWorldLog() {
+    async function loadChangesLog() {
       try {
         const res = await fetch('/api/world/log');
         const data = await res.json();
         const log = data.log || [];
+        if (!log.length) {
+          document.getElementById('changesLog').innerHTML = '<div class="empty-state">No cafe changes yet</div>';
+          return;
+        }
         const html = log.map(entry => {
           const time = new Date(entry.timestamp).toLocaleTimeString();
           const cls = entry.result === 'rejected' ? 'log-entry rejected' : 'log-entry';
-          return '<div class="' + cls + '"><span class="time">[' + time + ']</span><span class="cat">' + (entry.cat_name || entry.cat_code || 'Unknown') + '</span><span class="action">' + (entry.action_message || entry.action_type) + '</span></div>';
+          const icon = entry.result === 'rejected' ? '<span class="x">✗</span>' : '<span class="check">✓</span>';
+          const name = entry.cat_name || entry.cat_code || 'Unknown';
+          const msg = entry.action_message || entry.action_type || '';
+          return '<div class="' + cls + '"><span class="time">[' + time + ']</span>' + icon + '<span class="cat-name">' + name + '</span><span class="action-text">' + msg + '</span></div>';
         }).join('');
-        document.getElementById('worldLog').innerHTML = html || '<div class="empty-state" style="padding:15px">No cafe changes yet</div>';
-      } catch (e) { document.getElementById('worldLog').innerHTML = ''; }
+        document.getElementById('changesLog').innerHTML = html;
+      } catch (e) { document.getElementById('changesLog').innerHTML = '<div class="empty-state">Failed to load changes</div>'; }
     }
 
     async function loadCats() {
@@ -170,6 +214,7 @@
         const res = await fetch('/api/cats');
         const data = await res.json();
         renderCats(data.cats || []);
+        renderCatLegend(data.cats || []);
       } catch (e) { document.getElementById('catsGrid').innerHTML = '<div class="empty-state">No cats yet. Visit /pspsps</div>'; }
     }
 
@@ -188,9 +233,7 @@
     }
 
     function ansiToHtml(text) {
-      // HTML-escape first
       let html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      // Replace ANSI codes with spans — use simple string replace, not regex
       const codes = [
         ['\x1b[1m', '<b>'],
         ['\x1b[2m', '<span class="c-dim">'],
@@ -215,9 +258,7 @@
       for (const [ansi, replacement] of codes) {
         html = html.split(ansi).join(replacement);
       }
-      // Strip any remaining ANSI codes
       html = html.replace(/\x1b\[\d+m/g, '');
-      // Clean up duplicate closing tags
       html = html.replace(/<\/span><\/span>/g, '</span>');
       html = html.replace(/<\/b><\/b>/g, '</b>');
       return html;
@@ -237,12 +278,34 @@
       }).join('');
     }
 
+    // Render cat position legend under the room render
+    function renderCatLegend(cats) {
+      if (!cats.length) {
+        document.getElementById('catLegend').innerHTML = '';
+        return;
+      }
+      // Assign each cat to a zone (cycling through zones based on index)
+      const zones = ['cushion_zone', 'counter_area', 'open_floor', 'window_seat', 'cat_tower', 'corner_nook'];
+      const html = cats.slice(0, 12).map((cat, i) => {
+        const zone = zones[i % zones.length];
+        const icon = getCatIcon(i);
+        const name = cat.cat_dna?.name || 'Unknown';
+        return '<div class="cat-legend-item"><span class="cat-legend-icon">' + icon + '</span> ' + name + ' (' + zone + ')</div>';
+      }).join('');
+      document.getElementById('catLegend').innerHTML = html;
+    }
+
+    function getCatIcon(index) {
+      const icons = ['🐱', '🐈', '😼', '😺', '😸', '😻', '🐈‍⬛', '🐱'];
+      return icons[index % icons.length];
+    }
+
     async function scritchCat(catId, btn) {
       try {
         const card = btn.closest('.cat-card');
         card.classList.add('scritching');
         setTimeout(() => card.classList.remove('scritching'), 400);
-        showHeart(card.querySelector('.cat-art'));
+        showHeart(card.querySelector('.cat-art-wrap'));
         const res = await fetch('/api/cats/' + catId + '/scritch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId }) });
         const data = await res.json();
         if (data.success) {
@@ -281,7 +344,7 @@
     document.getElementById('codeInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') findCat(); });
 
     loadWorld();
-    loadWorldLog();
+    loadChangesLog();
     loadCats();
     loadLeaderboard();
   </script>
