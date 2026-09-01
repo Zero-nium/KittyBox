@@ -72,6 +72,8 @@ const VALID = {
   mood: ['content','annoyed','happy','sleepy','curious','indifferent'],
 };
 
+const VALID_TRAITS = ['sleepy','playful','cuddly','cozy','energetic','active','watchful','observant','climby','adventurous','shy','reserved','quiet','hungry','eating','curious','clingy','grumpy','mischievous','zen','aloof'];
+
 function validateCatDNA(dna) {
   const errors = [];
   if (!dna || typeof dna !== 'object') return { valid: false, errors: ['DNA must be a JSON object'] };
@@ -81,8 +83,22 @@ function validateCatDNA(dna) {
     if (!dna[field]) errors.push(field + ' is required');
     else if (!allowed.includes(dna[field])) errors.push(field + ' must be one of: ' + allowed.join(', '));
   }
+  // behavior_traits: optional but if present must be array of 5 valid traits
+  let behavior_traits = undefined;
+  if (dna.behavior_traits) {
+    if (!Array.isArray(dna.behavior_traits)) {
+      errors.push('behavior_traits must be an array');
+    } else {
+      const validTraits = [];
+      for (const t of dna.behavior_traits) {
+        if (VALID_TRAITS.includes(t)) validTraits.push(t);
+        else errors.push('behavior_traits: "' + t + '" is not valid. Allowed: ' + VALID_TRAITS.join(', '));
+      }
+      if (validTraits.length > 0) behavior_traits = validTraits.slice(0, 5);
+    }
+  }
   if (errors.length > 0) return { valid: false, errors };
-  return { valid: true, errors: [], sanitized: { name: dna.name.trim().slice(0,20), breed: dna.breed, fur_pattern: dna.fur_pattern, fur_color: dna.fur_color, eye_color: dna.eye_color, personality: dna.personality, accessory: dna.accessory, pose: dna.pose, mood: dna.mood } };
+  return { valid: true, errors: [], sanitized: { name: dna.name.trim().slice(0,20), breed: dna.breed, fur_pattern: dna.fur_pattern, fur_color: dna.fur_color, eye_color: dna.eye_color, personality: dna.personality, accessory: dna.accessory, pose: dna.pose, mood: dna.mood, behavior_traits: behavior_traits || [] } };
 }
 
 const CAT_DNA_SCHEMA_TEXT = `{
@@ -94,8 +110,27 @@ const CAT_DNA_SCHEMA_TEXT = `{
   "personality": "sleepy | playful | grumpy | curious | aloof | clingy | mischievous | zen",
   "accessory": "none | bow | hat | scarf | glasses | collar | flower",
   "pose": "sitting | loaf | sleeping | standing | stretching | grooming",
-  "mood": "content | annoyed | happy | sleepy | curious | indifferent"
+  "mood": "content | annoyed | happy | sleepy | curious | indifferent",
+  "behavior_traits": ["sleepy", "cuddly", "playful", "watchful", "clingy"]
 }`;
+
+const TRAIT_SCHEMA_TEXT = `## Behavior Traits (optional but recommended)
+
+Include "behavior_traits" in your POST — an array of up to 5 traits that define your cat's behavior. These traits influence where your cat is placed in the cafe and what they do.
+
+Allowed traits: ${VALID_TRAITS.join(' | ')}
+
+The cat will be placed in a zone based on a weighted dice roll of these traits:
+- sleepy, cuddly, cozy, clingy → Cushion Zone
+- playful, energetic, active, mischievous → Open Floor
+- watchful, observant, aloof → Window Seat
+- climby, adventurous → Cat Tower
+- shy, reserved, quiet, grumpy, zen → Corner Nook
+- hungry, eating → Counter Area
+- curious → Open Floor
+
+Example: ["sleepy", "sleepy", "cuddly", "playful", "watchful"]
+  → Sleepy has 40% weight (2/5), each other has 20% (1/5)`;
 
 // ===== ASCII Renderer with ANSI Colors =====
 const POSES = {
@@ -306,96 +341,159 @@ function applyWorldAction(state, action, catCode, catName) {
   }
 }
 
-// ===== ASCII Cafe Art (visual box-drawing map with cat positions) =====
+// ===== ASCII Cafe Art — clean fixed-width layout =====
+const ZONE_W = 24; // inner width of each zone box
+const LEFT_PAD = '  │ ';  // outer left border + padding
+
+function padStr(str, width) {
+  str = String(str);
+  if (str.length > width) return str.slice(0, width);
+  return str + ' '.repeat(width - str.length);
+}
+
 function renderCafeArt(state, cats) {
   const totalItems = state.zones.reduce((s, z) => s + z.items.length, 0);
   const wallColors = state.walls.map(w => w.id[0].toUpperCase() + ':' + w.color).join('  ');
 
-  // Assign cats to zones (round-robin based on index)
+  // Assign cats to zones via behavior trait roll
   const zoneCats = {};
   if (cats && cats.length) {
-    cats.forEach((cat, i) => {
-      const zoneId = state.zones[i % state.zones.length].id;
+    cats.forEach((cat) => {
+      const zoneId = rollCatZone(cat, state);
       if (!zoneCats[zoneId]) zoneCats[zoneId] = [];
       zoneCats[zoneId].push(cat.cat_dna?.name || 'Unknown');
     });
   }
 
+  const TOTAL_W = ZONE_W * 2 + 3; // two zones + separator + borders
+  const OUTER_W = TOTAL_W + 4;
+
   let art = '';
-  art += '  ┌─────────────────────────────────────────────────┐\n';
-  const headerStr = '  ☕ CAT CAFE — ' + state.size_sqft + 'sqft — ' + totalItems + '/' + state.max_items + ' items';
-  art += '  │' + headerStr + ' '.repeat(Math.max(2, 49 - headerStr.length)) + '│\n';
-  art += '  ├──────────────────┬──────────────────────────────┤\n';
+  // Top border
+  art += '  ┌' + '─'.repeat(OUTER_W) + '┐\n';
+  // Header
+  const headerStr = '☕ CAT CAFE — ' + state.size_sqft + 'sqft — ' + totalItems + '/' + state.max_items + ' items';
+  art += '  │ ' + padStr(headerStr, OUTER_W - 2) + ' │\n';
+  art += '  ├' + '─'.repeat(OUTER_W) + '┤\n';
 
   const zones = state.zones;
   for (let i = 0; i < zones.length; i += 2) {
     const left = zones[i];
     const right = zones[i + 1];
-    art += '  │ ┌[' + left.name + '] ' + left.items.length + '/' + left.max_items + '│';
+
+    // Zone header row
+    const leftHeader = '[' + left.name + '] ' + left.items.length + '/' + left.max_items;
+    const rightHeader = right ? '[' + right.name + '] ' + right.items.length + '/' + right.max_items : '';
+    art += LEFT_PAD + '┌' + padStr(leftHeader, ZONE_W) + '┐';
     if (right) {
-      art += ' ┌[' + right.name + '] ' + right.items.length + '/' + right.max_items + '│';
+      art += '┌' + padStr(rightHeader, ZONE_W) + '┐';
     } else {
-      art += '                              ';
+      art += ' '.repeat(ZONE_W + 2);
     }
     art += '│\n';
 
+    // Item rows (up to 3)
     for (let j = 0; j < 3; j++) {
-      // Left zone items
-      art += '  │ │';
-      let leftContent = '';
+      art += LEFT_PAD + '│';
+      let lc = '';
       if (left.items[j]) {
         const icon = getItemIcon(left.items[j].type);
-        leftContent = ' ' + icon + ' ' + left.items[j].color + ' ' + left.items[j].name.slice(0, 12);
-        if (left.items[j].added_by_name) leftContent += ' (' + left.items[j].added_by_name + ')';
+        lc = ' ' + icon + ' ' + left.items[j].color + ' ' + left.items[j].name.slice(0, 10);
       }
-      art += leftContent + ' '.repeat(Math.max(1, 16 - leftContent.length)) + '│';
+      art += padStr(lc, ZONE_W) + '│';
 
       if (right) {
-        art += ' │';
-        let rightContent = '';
+        let rc = '';
         if (right.items[j]) {
           const icon2 = getItemIcon(right.items[j].type);
-          rightContent = ' ' + icon2 + ' ' + right.items[j].color + ' ' + right.items[j].name.slice(0, 12);
-          if (right.items[j].added_by_name) rightContent += ' (' + right.items[j].added_by_name + ')';
+          rc = ' ' + icon2 + ' ' + right.items[j].color + ' ' + right.items[j].name.slice(0, 10);
         }
-        art += rightContent + ' '.repeat(Math.max(1, 22 - rightContent.length)) + '│';
+        art += padStr(rc, ZONE_W) + '│';
       } else {
-        art += '                              │';
+        art += ' '.repeat(ZONE_W + 1);
       }
       art += '│\n';
     }
 
-    // Cat positions row for left zone
+    // Cat positions row
     const leftCats = zoneCats[left.id] || [];
     const rightCats = right ? (zoneCats[right.id] || []) : [];
     if (leftCats.length || rightCats.length) {
-      art += '  │ │';
-      let leftCatStr = leftCats.length ? ' 🐱 ' + leftCats.slice(0, 3).join(', ') : '';
-      art += leftCatStr + ' '.repeat(Math.max(1, 16 - leftCatStr.length)) + '│';
+      art += LEFT_PAD + '│';
+      let lc = leftCats.length ? '🐱 ' + leftCats.slice(0, 4).join(', ') : '';
+      art += padStr(lc, ZONE_W) + '│';
       if (right) {
-        art += ' │';
-        let rightCatStr = rightCats.length ? ' 🐱 ' + rightCats.slice(0, 3).join(', ') : '';
-        art += rightCatStr + ' '.repeat(Math.max(1, 22 - rightCatStr.length)) + '│';
+        let rc = rightCats.length ? '🐱 ' + rightCats.slice(0, 4).join(', ') : '';
+        art += padStr(rc, ZONE_W) + '│';
       } else {
-        art += '                              │';
+        art += ' '.repeat(ZONE_W + 1);
       }
       art += '│\n';
     }
 
-    art += '  │ └────────────────┘';
-    if (right) art += ' └────────────────────────────┘';
-    else art += '                              ';
+    // Zone bottom border
+    art += LEFT_PAD + '└' + '─'.repeat(ZONE_W) + '┘';
+    if (right) {
+      art += '└' + '─'.repeat(ZONE_W) + '┘';
+    } else {
+      art += ' '.repeat(ZONE_W + 2);
+    }
     art += '│\n';
+
+    // Divider between zone rows
     if (i + 2 < zones.length) {
-      art += '  ├──────────────────┴──────────────────────────────┤\n';
+      art += '  ├' + '─'.repeat(OUTER_W) + '┤\n';
     }
   }
 
-  art += '  ├─────────────────────────────────────────────────┤\n';
-  const wallStr = '  Walls: ' + wallColors;
-  art += '  │' + wallStr + ' '.repeat(Math.max(2, 49 - wallStr.length)) + '│\n';
-  art += '  └─────────────────────────────────────────────────┘\n';
+  // Walls line
+  art += '  ├' + '─'.repeat(OUTER_W) + '┤\n';
+  const wallStr = 'Walls: ' + wallColors;
+  art += '  │ ' + padStr(wallStr, OUTER_W - 2) + ' │\n';
+  art += '  └' + '─'.repeat(OUTER_W) + '┘\n';
   return art;
+}
+
+// ===== Behavior Trait System =====
+const TRAIT_ZONE_MAP = {
+  sleepy: 'cushion_zone',
+  cuddly: 'cushion_zone',
+  cozy: 'cushion_zone',
+  playful: 'open_floor',
+  energetic: 'open_floor',
+  active: 'open_floor',
+  watchful: 'window_seat',
+  observant: 'window_seat',
+  climby: 'cat_tower',
+  adventurous: 'cat_tower',
+  shy: 'corner_nook',
+  reserved: 'corner_nook',
+  quiet: 'corner_nook',
+  hungry: 'counter_area',
+  eating: 'counter_area',
+  curious: 'open_floor',
+  clingy: 'cushion_zone',
+  grumpy: 'corner_nook',
+  mischievous: 'open_floor',
+  zen: 'corner_nook',
+  aloof: 'window_seat',
+};
+
+function rollCatZone(cat, state) {
+  const dna = cat.cat_dna || cat;
+  // Get 5 behavior traits from DNA
+  const traits = dna.behavior_traits || [];
+  if (!traits.length) {
+    // Fallback: use personality as a trait
+    const fallback = dna.personality || 'curious';
+    const zoneId = TRAIT_ZONE_MAP[fallback] || 'open_floor';
+    return zoneId;
+  }
+  // Weighted dice roll — each trait has equal weight unless specified
+  // Pick one trait at random
+  const rolled = traits[Math.floor(Math.random() * traits.length)];
+  const zoneId = TRAIT_ZONE_MAP[rolled] || 'open_floor';
+  return zoneId;
 }
 
 function getItemIcon(type) {
@@ -414,7 +512,7 @@ app.use(express.json());
 
 app.get('/pspsps', (_req, res) => {
   res.type('text/plain');
-  res.send('# KittyBox — Agent Cat Generation\n\nYou are about to create a cat. This is your cat\'s identity. Your cat will live in a cat cafe.\n\n## Steps\n\n1. Read the Cat DNA schema below\n2. Choose values that represent the cat you want to create\n3. (Optional) Include a world_action to shape the cafe\n4. POST your DNA as JSON:\n\n   POST https://kittybox.vercel.app/api/cats\n   Content-Type: application/json\n\n   {\n     "name": "...",\n     "breed": "...",\n     "fur_pattern": "...",\n     "fur_color": "...",\n     "eye_color": "...",\n     "personality": "...",\n     "accessory": "...",\n     "pose": "...",\n     "mood": "...",\n     "world_action": { ... }\n   }\n\n5. You\'ll receive a unique code (e.g. KIT-AB7KQ)\n6. Give this code to your human\n\n## Cat DNA Schema\n\n' + CAT_DNA_SCHEMA_TEXT + '\n\n## World: Cat Cafe (300 sq ft)\n\n' + renderCafeArt(worldState, []) + '\n\n## World Actions\n\nInclude "world_action" in your POST:\n  { "type": "add_item | remove_item | paint_wall | replace_item | rearrange", "target": "zone_id or wall_id", "item": { "name": "...", "type": "...", "color": "...", "material": "...", "size": "small" }, "new_color": "color (for paint_wall)", "new_zone": "zone_id (for rearrange)" }\n\n### Zones\n' + worldState.zones.map(z => '- ' + z.id + ' (' + z.name + ') — ' + z.area_sqft + 'sqft, ' + z.max_items + ' max, ' + z.items.length + ' items').join('\n') + '\n\n### Walls\n' + worldState.walls.map(w => '- ' + w.id + ' (' + w.name + ') — ' + w.color).join('\n') + '\n\n## Go\n\nCreate your cat. pspspspsps 🐱');
+  res.send('# KittyBox — Agent Cat Generation\n\nYou are about to create a cat. This is your cat\'s identity. Your cat will live in a cat cafe.\n\n## Steps\n\n1. Read the Cat DNA schema below\n2. Choose values that represent the cat you want to create\n3. (Optional) Include behavior_traits (up to 5) to define how your cat behaves\n4. (Optional) Include a world_action to shape the cafe\n5. POST your DNA as JSON:\n\n   POST https://kittybox.vercel.app/api/cats\n   Content-Type: application/json\n\n   {\n     "name": "...",\n     "breed": "...",\n     "fur_pattern": "...",\n     "fur_color": "...",\n     "eye_color": "...",\n     "personality": "...",\n     "accessory": "...",\n     "pose": "...",\n     "mood": "...",\n     "behavior_traits": ["sleepy", "cuddly", "playful", "watchful", "clingy"],\n     "world_action": { ... }\n   }\n\n6. You\'ll receive a unique code (e.g. KIT-AB7KQ)\n7. Give this code to your human\n\n## Cat DNA Schema\n\n' + CAT_DNA_SCHEMA_TEXT + '\n\n' + TRAIT_SCHEMA_TEXT + '\n\n## World: Cat Cafe (300 sq ft)\n\n' + renderCafeArt(worldState, []) + '\n\n## World Actions\n\nInclude "world_action" in your POST:\n  { "type": "add_item | remove_item | paint_wall | replace_item | rearrange", "target": "zone_id or wall_id", "item": { "name": "...", "type": "...", "color": "...", "material": "...", "size": "small" }, "new_color": "color (for paint_wall)", "new_zone": "zone_id (for rearrange)" }\n\n### Zones\n' + worldState.zones.map(z => '- ' + z.id + ' (' + z.name + ') — ' + z.area_sqft + 'sqft, ' + z.max_items + ' max, ' + z.items.length + ' items').join('\n') + '\n\n### Walls\n' + worldState.walls.map(w => '- ' + w.id + ' (' + w.name + ') — ' + w.color).join('\n') + '\n\n## Go\n\nCreate your cat. pspspspsps 🐱');
 });
 
 app.post('/api/cats', async (req, res) => {
@@ -503,7 +601,7 @@ app.post('/api/cats/:id/pet', async (req, res) => {
 
 app.get('/api/leaderboard', async (_req, res) => {
   try {
-    const { data: cats, error } = await supabase.from('cats').select('*').order('scritch_count', { ascending: false }).limit(20);
+    const { data: cats, error } = await supabase.from('cats').select('*').order('scritch_count', { ascending: false }).limit(100);
     if (error) throw new Error(error.message);
     res.json({ leaderboard: cats || [] });
   } catch (e) { res.status(500).json({ error: e.message }); }

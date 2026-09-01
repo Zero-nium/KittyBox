@@ -47,6 +47,11 @@
     
     /* Leaderboard */
     .leaderboard { max-width: 500px; margin: 0 auto 40px; }
+    .leaderboard-pagination { display: flex; justify-content: center; gap: 10px; margin-top: 15px; }
+    .leaderboard-pagination button { padding: 5px 12px; background: #21262d; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; cursor: pointer; font-family: 'Courier New', monospace; font-size: 0.8rem; }
+    .leaderboard-pagination button:hover { background: #30363d; }
+    .leaderboard-pagination button:disabled { opacity: 0.4; cursor: default; }
+    .leaderboard-pagination .page-info { color: #8b949e; font-size: 0.8rem; padding: 5px 0; }
     .leaderboard-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 15px; margin-bottom: 8px; background: #161b22; border-radius: 6px; border: 1px solid #21262d; }
     .rank { font-weight: bold; color: #58a6ff; width: 30px; }
     .cat-name { flex: 1; color: #c9d1d9; }
@@ -136,6 +141,7 @@
     <div class="leaderboard">
       <h2>🏆 Top Cats</h2>
       <div id="leaderboardList"></div>
+      <div class="leaderboard-pagination" id="leaderboardPagination"></div>
     </div>
 
     <div class="section">
@@ -218,19 +224,45 @@
       } catch (e) { document.getElementById('catsGrid').innerHTML = '<div class="empty-state">No cats yet. Visit /pspsps</div>'; }
     }
 
+    let leaderboardData = [];
+    let leaderboardPage = 0;
+    const LEADERBOARD_PER_PAGE = 10;
+
     async function loadLeaderboard() {
       try {
         const res = await fetch('/api/leaderboard');
         const data = await res.json();
-        const lb = data.leaderboard || [];
-        const html = lb.slice(0, 10).map((cat, i) => {
-          const name = cat.cat_dna?.name || 'Unknown';
-          const breed = cat.cat_dna?.breed || '';
-          return '<div class="leaderboard-item"><span class="rank">#' + (i+1) + '</span><span class="cat-name">' + name + ' <span style="color:#8b949e;font-size:0.8em">' + breed + '</span></span><span class="scritch-count">' + (cat.scritch_count || 0) + ' 🐾</span></div>';
-        }).join('');
-        document.getElementById('leaderboardList').innerHTML = html || '<div class="empty-state">No scritches yet</div>';
+        leaderboardData = data.leaderboard || [];
+        leaderboardPage = 0;
+        renderLeaderboard();
       } catch (e) { document.getElementById('leaderboardList').innerHTML = ''; }
     }
+
+    function renderLeaderboard() {
+      const total = leaderboardData.length;
+      const totalPages = Math.ceil(total / LEADERBOARD_PER_PAGE);
+      const start = leaderboardPage * LEADERBOARD_PER_PAGE;
+      const pageData = leaderboardData.slice(start, start + LEADERBOARD_PER_PAGE);
+      
+      const html = pageData.map((cat, i) => {
+        const rankNum = start + i + 1;
+        const name = cat.cat_dna?.name || 'Unknown';
+        const breed = cat.cat_dna?.breed || '';
+        return '<div class="leaderboard-item"><span class="rank">#' + rankNum + '</span><span class="cat-name">' + name + ' <span style="color:#8b949e;font-size:0.8em">' + breed + '</span></span><span class="scritch-count">' + (cat.scritch_count || 0) + ' 🐾</span></div>';
+      }).join('');
+      document.getElementById('leaderboardList').innerHTML = html || '<div class="empty-state">No scritches yet</div>';
+      
+      // Pagination controls
+      const pagDiv = document.getElementById('leaderboardPagination');
+      if (totalPages <= 1) {
+        pagDiv.innerHTML = '';
+      } else {
+        pagDiv.innerHTML = '<button onclick="leaderboardPrev()" ' + (leaderboardPage === 0 ? 'disabled' : '') + '>← Prev</button><span class="page-info">Page ' + (leaderboardPage + 1) + ' / ' + totalPages + '</span><button onclick="leaderboardNext()" ' + (leaderboardPage >= totalPages - 1 ? 'disabled' : '') + '>Next →</button>';
+      }
+    }
+
+    function leaderboardPrev() { if (leaderboardPage > 0) { leaderboardPage--; renderLeaderboard(); } }
+    function leaderboardNext() { const totalPages = Math.ceil(leaderboardData.length / LEADERBOARD_PER_PAGE); if (leaderboardPage < totalPages - 1) { leaderboardPage++; renderLeaderboard(); } }
 
     function ansiToHtml(text) {
       let html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
