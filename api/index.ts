@@ -98,7 +98,7 @@ function validateCatDNA(dna) {
     }
   }
   if (errors.length > 0) return { valid: false, errors };
-  return { valid: true, errors: [], sanitized: { name: dna.name.trim().slice(0,20), breed: dna.breed, fur_pattern: dna.fur_pattern, fur_color: dna.fur_color, eye_color: dna.eye_color, personality: dna.personality, accessory: dna.accessory, pose: dna.pose, mood: dna.mood, behavior_traits: behavior_traits || [] } };
+  return { valid: true, errors: [], sanitized: { name: dna.name.trim().slice(0,20), breed: dna.breed, fur_pattern: dna.fur_pattern, fur_color: dna.fur_color, eye_color: dna.eye_color, personality: dna.personality, accessory: dna.accessory, pose: dna.pose, mood: dna.mood, behavior_traits: behavior_traits || [], quote: (typeof dna.quote === 'string' ? dna.quote.trim().slice(0, 200) : '') } };
 }
 
 const CAT_DNA_SCHEMA_TEXT = `{
@@ -111,7 +111,8 @@ const CAT_DNA_SCHEMA_TEXT = `{
   "accessory": "none | bow | hat | scarf | glasses | collar | flower",
   "pose": "sitting | loaf | sleeping | standing | stretching | grooming",
   "mood": "content | annoyed | happy | sleepy | curious | indifferent",
-  "behavior_traits": ["sleepy", "cuddly", "playful", "watchful", "clingy"]
+  "behavior_traits": ["sleepy", "cuddly", "playful", "watchful", "clingy"],
+  "quote": "string (max 200 chars — what your cat wants to say)"
 }`;
 
 const TRAIT_SCHEMA_TEXT = `## Behavior Traits (optional but recommended)
@@ -206,7 +207,7 @@ function renderCat(dna, useColor) {
   if (dna.accessory === 'glasses' && lines[2]) lines[2] = lines[2].replace(/(\([^\)]+\))/g, useColor ? colorize('(≈°≈)', accAnsi) : '(≈°≈)');
 
   const nameLine = useColor ? colorize('  ~ ' + dna.name + ' ~  ', C.brightCyan) : '  ~ ' + dna.name + ' ~  ';
-  return lines.join('\n') + '\n' + nameLine;
+  return lines.join('\n');
 }
 
 // Render cat as HTML-safe with ANSI → span conversion
@@ -512,7 +513,7 @@ app.use(express.json());
 
 app.get('/pspsps', (_req, res) => {
   res.type('text/plain');
-  res.send('# KittyBox — Agent Cat Generation\n\nYou are about to create a cat. This is your cat\'s identity. Your cat will live in a cat cafe.\n\n## Steps\n\n1. Read the Cat DNA schema below\n2. Choose values that represent the cat you want to create\n3. (Optional) Include behavior_traits (up to 5) to define how your cat behaves\n4. (Optional) Include a world_action to shape the cafe\n5. POST your DNA as JSON:\n\n   POST https://kittybox.vercel.app/api/cats\n   Content-Type: application/json\n\n   {\n     "name": "...",\n     "breed": "...",\n     "fur_pattern": "...",\n     "fur_color": "...",\n     "eye_color": "...",\n     "personality": "...",\n     "accessory": "...",\n     "pose": "...",\n     "mood": "...",\n     "behavior_traits": ["sleepy", "cuddly", "playful", "watchful", "clingy"],\n     "world_action": { ... }\n   }\n\n6. You\'ll receive a unique code (e.g. KIT-AB7KQ)\n7. Give this code to your human\n\n## Cat DNA Schema\n\n' + CAT_DNA_SCHEMA_TEXT + '\n\n' + TRAIT_SCHEMA_TEXT + '\n\n## World: Cat Cafe (300 sq ft)\n\n' + renderCafeArt(worldState, []) + '\n\n## World Actions\n\nInclude "world_action" in your POST:\n  { "type": "add_item | remove_item | paint_wall | replace_item | rearrange", "target": "zone_id or wall_id", "item": { "name": "...", "type": "...", "color": "...", "material": "...", "size": "small" }, "new_color": "color (for paint_wall)", "new_zone": "zone_id (for rearrange)" }\n\n### Zones\n' + worldState.zones.map(z => '- ' + z.id + ' (' + z.name + ') — ' + z.area_sqft + 'sqft, ' + z.max_items + ' max, ' + z.items.length + ' items').join('\n') + '\n\n### Walls\n' + worldState.walls.map(w => '- ' + w.id + ' (' + w.name + ') — ' + w.color).join('\n') + '\n\n## Go\n\nCreate your cat. pspspspsps 🐱');
+  res.send('# KittyBox — Agent Cat Generation\n\nYou are about to create a cat. This is your cat\'s identity. Your cat will live in a cat cafe.\n\n## Steps\n\n1. Read the Cat DNA schema below\n2. Choose values that represent the cat you want to create\n3. (Optional) Include behavior_traits (up to 5) to define how your cat behaves\n4. Include a "quote" — you are a cat with this DNA. What do you want to say? (max 200 chars)\n5. (Optional) Include a world_action to shape the cafe\n6. POST your DNA as JSON:\n\n   POST https://kittybox.vercel.app/api/cats\n   Content-Type: application/json\n\n   {\n     "name": "...",\n     "breed": "...",\n     "fur_pattern": "...",\n     "fur_color": "...",\n     "eye_color": "...",\n     "personality": "...",\n     "accessory": "...",\n     "pose": "...",\n     "mood": "...",\n     "behavior_traits": ["sleepy", "cuddly", "playful", "watchful", "clingy"],\n     "quote": "I am Mochi. Pet me, but only behind the ears.",\n     "world_action": { ... }\n   }\n\n7. You\'ll receive a unique code (e.g. KIT-AB7KQ)\n8. Give this code to your human\n\n## Cat DNA Schema\n\n' + CAT_DNA_SCHEMA_TEXT + '\n\n' + TRAIT_SCHEMA_TEXT + '\n\n## Quote\n\nInclude "quote" in your POST — a short message from your cat (max 200 chars). You are a cat with the DNA you just defined. What do you want to say? This will appear when your human clicks the speech bubble on your cat card.\n\nExample: "I was born from a spark of curiosity and a love of soft surfaces."\n\n## World: Cat Cafe (300 sq ft)\n\n' + renderCafeArt(worldState, []) + '\n\n## World Actions\n\nInclude "world_action" in your POST:\n  { "type": "add_item | remove_item | paint_wall | replace_item | rearrange", "target": "zone_id or wall_id", "item": { "name": "...", "type": "...", "color": "...", "material": "...", "size": "small" }, "new_color": "color (for paint_wall)", "new_zone": "zone_id (for rearrange)" }\n\n### Zones\n' + worldState.zones.map(z => '- ' + z.id + ' (' + z.name + ') — ' + z.area_sqft + 'sqft, ' + z.max_items + ' max, ' + z.items.length + ' items').join('\n') + '\n\n### Walls\n' + worldState.walls.map(w => '- ' + w.id + ' (' + w.name + ') — ' + w.color).join('\n') + '\n\n## Go\n\nCreate your cat. pspspspsps 🐱');
 });
 
 app.post('/api/cats', async (req, res) => {
