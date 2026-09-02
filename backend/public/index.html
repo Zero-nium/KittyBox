@@ -251,8 +251,8 @@
           const time = new Date(entry.timestamp).toLocaleTimeString();
           const cls = entry.result === 'rejected' ? 'log-entry rejected' : 'log-entry';
           const icon = entry.result === 'rejected' ? '<span class="x">✗</span>' : '<span class="check">✓</span>';
-          const name = entry.cat_name || entry.cat_code || 'Unknown';
-          const msg = entry.action_message || entry.action_type || '';
+          const name = escapeHtml(entry.cat_name || entry.cat_code || 'Unknown');
+          const msg = escapeHtml(entry.action_message || entry.action_type || '');
           return '<div class="' + cls + '"><span class="time">[' + time + ']</span>' + icon + '<span class="cat-name">' + name + '</span><span class="action-text">' + msg + '</span></div>';
         }).join('');
         document.getElementById('changesLog').innerHTML = html;
@@ -290,8 +290,8 @@
       
       const html = pageData.map((cat, i) => {
         const rankNum = start + i + 1;
-        const name = cat.cat_dna?.name || 'Unknown';
-        const breed = cat.cat_dna?.breed || '';
+        const name = escapeHtml(cat.cat_dna?.name || 'Unknown');
+        const breed = escapeHtml(cat.cat_dna?.breed || '');
         return '<div class="leaderboard-item"><span class="rank">#' + rankNum + '</span><span class="cat-name">' + name + ' <span style="color:#8b949e;font-size:0.8em">' + breed + '</span></span><span class="scritch-count">' + (cat.scritch_count || 0) + ' 🐾</span></div>';
       }).join('');
       document.getElementById('leaderboardList').innerHTML = html || '<div class="empty-state">No scritches yet</div>';
@@ -307,6 +307,10 @@
 
     function leaderboardPrev() { if (leaderboardPage > 0) { leaderboardPage--; renderLeaderboard(); } }
     function leaderboardNext() { const totalPages = Math.ceil(leaderboardData.length / LEADERBOARD_PER_PAGE); if (leaderboardPage < totalPages - 1) { leaderboardPage++; renderLeaderboard(); } }
+
+    function escapeHtml(str) {
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
 
     function ansiToHtml(text) {
       let html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -351,9 +355,9 @@
         const art = cat.ascii_art_colored || cat.ascii_art || '';
         const processed = ansiToHtml(art);
         const quote = dna.quote || '';
-        const safeQuote = quote.replace(/'/g, '&apos;').replace(/"/g, '&quot;');
+        const safeQuote = escapeHtml(quote);
         const quoteBtn = quote ? '<button class="quote-btn" onclick="showQuoteById(\'' + cat.id + '\')">💬</button>' : '';
-        return '<div class="cat-card" id="cat-' + cat.id + '" data-code="' + cat.code + '" data-quote="' + safeQuote + '"><div class="cat-art-wrap"><pre class="cat-art">' + processed + '</pre></div><div class="cat-name-text">' + (dna.name || 'Unnamed') + '</div><div class="cat-breed">' + (dna.breed || '') + ' · ' + (dna.personality || '') + '</div><div class="scritch-count-display">🐾 ' + (cat.scritch_count || 0) + ' scritches</div>' + quoteBtn + ' <button class="scritch-btn" onclick="scritchCat(\'' + cat.id + '\', this)">Scritch 🐾</button></div>';
+        return '<div class="cat-card" id="cat-' + cat.id + '" data-code="' + escapeHtml(cat.code) + '" data-quote="' + safeQuote + '"><div class="cat-art-wrap"><pre class="cat-art">' + processed + '</pre></div><div class="cat-name-text">' + escapeHtml(dna.name || 'Unnamed') + '</div><div class="cat-breed">' + escapeHtml(dna.breed || '') + ' · ' + escapeHtml(dna.personality || '') + '</div><div class="scritch-count-display">🐾 ' + (cat.scritch_count || 0) + ' scritches</div>' + quoteBtn + ' <button class="scritch-btn" onclick="scritchCat(\'' + cat.id + '\', this)">Scritch 🐾</button></div>';
       }).join('');
     }
 
