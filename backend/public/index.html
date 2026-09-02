@@ -203,14 +203,19 @@
       setTimeout(() => heart.remove(), 1000);
     }
 
-    function showQuote(catId, name, quote, breed, personality) {
+    function showQuoteById(catId) {
+      const card = document.getElementById('cat-' + catId);
+      if (!card) return;
+      const name = card.querySelector('.cat-name-text') ? card.querySelector('.cat-name-text').textContent : 'Unknown';
+      const breed = card.querySelector('.cat-breed') ? card.querySelector('.cat-breed').textContent : '';
+      const rawQuote = card.getAttribute('data-quote') || '';
+      const quote = rawQuote.replace(/&apos;/g, "'").replace(/&quot;/g, '"');
+      const artEl = card.querySelector('.cat-art');
       const modal = document.getElementById('quoteModal');
       document.getElementById('modalName').textContent = name;
       document.getElementById('modalQuote').textContent = '"' + quote + '"';
-      const art = document.querySelector('#cat-' + catId + ' .cat-art');
-      if (art) document.getElementById('modalArt').innerHTML = art.innerHTML;
-      const traits = breed ? (breed + ' · ' + (personality || '')) : '';
-      document.getElementById('modalTraits').textContent = traits;
+      if (artEl) document.getElementById('modalArt').innerHTML = artEl.innerHTML;
+      document.getElementById('modalTraits').textContent = breed;
       modal.classList.add('show');
     }
 
@@ -346,8 +351,9 @@
         const art = cat.ascii_art_colored || cat.ascii_art || '';
         const processed = ansiToHtml(art);
         const quote = dna.quote || '';
-        const quoteBtn = quote ? '<button class="quote-btn" onclick="showQuote(\'' + cat.id + '\',\'' + (dna.name || 'Unknown').replace(/'/g,"\\'") + '\',\'' + quote.replace(/'/g,"\\'").replace(/"/g,'&quot;') + '\',\'' + (dna.breed||'') + '\',\'' + (dna.personality||'') + '\')">💬</button>' : '';
-        return '<div class="cat-card" id="cat-' + cat.id + '" data-code="' + cat.code + '"><div class="cat-art-wrap"><pre class="cat-art">' + processed + '</pre></div><div class="cat-name-text">' + (dna.name || 'Unnamed') + '</div><div class="cat-breed">' + (dna.breed || '') + ' · ' + (dna.personality || '') + '</div><div class="scritch-count-display">🐾 ' + (cat.scritch_count || 0) + ' scritches</div>' + quoteBtn + ' <button class="scritch-btn" onclick="scritchCat(\'' + cat.id + '\', this)">Scritch 🐾</button></div>';
+        const safeQuote = quote.replace(/'/g, '&apos;').replace(/"/g, '&quot;');
+        const quoteBtn = quote ? '<button class="quote-btn" onclick="showQuoteById(\'' + cat.id + '\')">💬</button>' : '';
+        return '<div class="cat-card" id="cat-' + cat.id + '" data-code="' + cat.code + '" data-quote="' + safeQuote + '"><div class="cat-art-wrap"><pre class="cat-art">' + processed + '</pre></div><div class="cat-name-text">' + (dna.name || 'Unnamed') + '</div><div class="cat-breed">' + (dna.breed || '') + ' · ' + (dna.personality || '') + '</div><div class="scritch-count-display">🐾 ' + (cat.scritch_count || 0) + ' scritches</div>' + quoteBtn + ' <button class="scritch-btn" onclick="scritchCat(\'' + cat.id + '\', this)">Scritch 🐾</button></div>';
       }).join('');
     }
 
